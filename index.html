@@ -1,276 +1,688 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>البطولة الجديدة 2026</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React & ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- Babel Compiler -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-900 text-white min-h-screen">
-  <div id="root"></div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دوري مديرية ميدي للمحترفين 2026</title>
+    
+    <!-- مكتبة Supabase JS الرسمية -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
-
-    const SUPABASE_URL = 'https://ptmochzprrdkjodcqefn.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_FEU0T7YfBpXCIE4puwa8UQ_binTsdgX';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    function NewLeagueApp() {
-      const [activeTab, setActiveTab] = useState('matches');
-      const [isAdmin, setIsAdmin] = useState(false);
-      const [adminPin, setAdminPin] = useState('');
-      const [darkMode, setDarkMode] = useState(true);
-      const [loading, setLoading] = useState(true);
-
-      const leagueLogo = 'https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png';
-
-      const [teams, setTeams] = useState([
-        { name: 'فريق أ', logo: 'https://via.placeholder.com/100', players: ['لاعب 1', 'لاعب 2'] },
-        { name: 'فريق ب', logo: 'https://via.placeholder.com/100', players: ['لاعب 1', 'لاعب 2'] }
-      ]);
-
-      const [matches, setMatches] = useState([
-        { id: '1', date: '2026-09-01', homeTeam: 'فريق أ', awayTeam: 'فريق ب', homeGoals: 0, awayGoals: 0, played: false }
-      ]);
-
-      const [news, setNews] = useState([
-        { id: '1', title: 'انطلاق البطولة الجديدة', content: 'مرحباً بكم في منافسات البطولة الجديدة.', date: '2026-09-01' }
-      ]);
-
-      useEffect(() => {
-        fetchData();
-      }, []);
-
-      async function fetchData() {
-        setLoading(true);
-        try {
-          const { data, error } = await supabase
-            .from('new_league_data')
-            .select('*')
-            .eq('id', 1)
-            .single();
-
-          if (data) {
-            if (Array.isArray(data.teams) && data.teams.length > 0) setTeams(data.teams);
-            if (Array.isArray(data.matches) && data.matches.length > 0) setMatches(data.matches);
-            if (Array.isArray(data.news) && data.news.length > 0) setNews(data.news);
-          }
-        } catch (error) {
-          console.log('Load error:', error);
-        } finally {
-          setLoading(false);
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #0f172a;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-emerald: #10b981;
+            --accent-gold: #f59e0b;
         }
-      }
 
-      async function saveData(newMatches = matches) {
-        try {
-          const { error } = await supabase
-            .from('new_league_data')
-            .upsert({
-              id: 1,
-              teams: teams,
-              matches: newMatches,
-              news: news,
-              updated_at: new Date().toISOString()
+        .light-theme {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-input: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-emerald: #059669;
+            --accent-gold: #d97706;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; transition: background-color 0.2s, color 0.2s; }
+        body { background-color: var(--bg-main); color: var(--text-primary); padding-bottom: 70px; direction: rtl; }
+        
+        /* الهيدر وشعار الدوري */
+        .header { background: #047857; color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .league-logo { width: 44px; height: 44px; border-radius: 50%; background: white; padding: 2px; object-fit: contain; border: 2px solid var(--accent-gold); }
+        .title { font-size: 15px; font-weight: 800; }
+        .subtitle { font-size: 11px; opacity: 0.85; }
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn { background: rgba(0,0,0,0.2); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+
+        .container { max-width: 600px; margin: 15px auto; padding: 0 12px; }
+        
+        /* بطاقات العرض */
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .section-title { font-size: 15px; font-weight: 700; color: var(--accent-gold); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+
+        /* حالة الاتصال بالقاعدة */
+        .db-status { font-size: 10px; text-align: center; padding: 4px; border-radius: 4px; margin-bottom: 10px; background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald); font-weight: bold; }
+
+        /* جدول المباريات */
+        .match-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+        .match-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+        .match-body { display: flex; align-items: center; justify-content: space-between; }
+        .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+        .team-logo-img { width: 42px; height: 42px; object-fit: contain; background: rgba(255,255,255,0.05); border-radius: 50%; padding: 2px; border: 1px solid var(--border-color); }
+        .team-name { font-size: 12px; font-weight: bold; }
+        .score-badge { background: var(--accent-emerald); color: white; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 14px; }
+        .vs-badge { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .scorers-info { font-size: 11px; color: var(--accent-emerald); margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
+
+        /* الجدول */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }
+        th { background: var(--bg-input); color: var(--accent-emerald); padding: 8px 4px; font-size: 10px; border-bottom: 1px solid var(--border-color); }
+        td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        .team-td { display: flex; align-items: center; gap: 6px; text-align: right; min-width: 100px; font-weight: bold; }
+
+        /* الفرق واللاعبين */
+        .team-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+        .team-btn { padding: 8px 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-secondary); font-weight: bold; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .team-btn.active { border-color: var(--accent-emerald); color: var(--accent-emerald); background: rgba(16, 185, 129, 0.1); }
+        .player-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        .player-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 6px 8px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
+
+        /* لوحة التحكم */
+        .admin-form { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        input, select { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 6px; font-size: 12px; outline: none; }
+        .btn-submit { background: var(--accent-emerald); color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* الشريط السفلي */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; }
+        .nav-item { border: none; background: transparent; color: var(--text-secondary); font-size: 10px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .nav-item.active { color: var(--accent-emerald); }
+        .nav-item span { font-size: 16px; }
+
+        .footer { text-align: center; font-size: 10px; color: var(--text-secondary); margin-top: 20px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="header-brand">
+                <img src="https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png" alt="شعار الدوري" class="league-logo">
+                <div>
+                    <div class="title">دوري ميدي للمحترفين</div>
+                    <div class="subtitle">ملعب بني فايد 2026</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleTheme()">☀️ / 🌙</button>
+                <button class="icon-btn" style="background: var(--accent-gold); color: #000;" onclick="openTab('admin')">⚙️ الإدارة</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="db-status-bar" class="db-status">⚡ جاري الاتصال بقاعدة البيانات السحابية (Supabase)...</div>
+
+        <!-- تبويب المباريات -->
+        <div id="sec-matches">
+            <div class="section-title">📅 جدول مواعيد المباريات</div>
+            <div id="matches-list"></div>
+        </div>
+
+        <!-- تبويب الترتيب -->
+        <div id="sec-standings" class="hidden">
+            <div class="card">
+                <div class="section-title">🏆 جدول الترتيب العام</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th style="text-align:right;">الفريق</th>
+                                <th>ل</th>
+                                <th>ف</th>
+                                <th>ت</th>
+                                <th>خ</th>
+                                <th>له</th>
+                                <th>عليه</th>
+                                <th>+/-</th>
+                                <th>نقاط</th>
+                            </tr>
+                        </thead>
+                        <tbody id="standings-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب الأخبار -->
+        <div id="sec-news" class="hidden">
+            <div class="section-title">📰 مستجدات البطولة</div>
+            <div id="news-list"></div>
+        </div>
+
+        <!-- تبويب الفرق واللاعبين -->
+        <div id="sec-teams" class="hidden">
+            <div class="team-selector" id="team-nav-buttons"></div>
+            <div class="card" id="team-squad-box"></div>
+        </div>
+
+        <!-- تبويب الهدافين -->
+        <div id="sec-scorers" class="hidden">
+            <div class="card">
+                <div class="section-title">⚽ قائمة الهدافين</div>
+                <div id="scorers-box"></div>
+            </div>
+        </div>
+
+        <!-- تبويب الإدارة -->
+        <div id="sec-admin" class="hidden">
+            <div class="card">
+                <div class="section-title">🔒 لوحة التحكم وحفظ النتائج (Supabase)</div>
+                
+                <div id="admin-auth-box">
+                    <div class="form-group">
+                        <label>أدخل رمز الأمان للوصول للوحة التحكم:</label>
+                        <input type="password" id="admin-pin" placeholder="رمز الأمان (aymanmidi)">
+                    </div>
+                    <button class="btn-submit" style="margin-top: 8px;" onclick="authenticateAdmin()">تسجيل الدخول</button>
+                </div>
+
+                <div id="admin-panel-content" class="hidden">
+                    <div class="admin-form">
+                        <div class="form-group">
+                            <label>اختر المباراة لتعديل النتيجة:</label>
+                            <select id="adm-match-select" onchange="onAdminSelectMatch()"></select>
+                        </div>
+                        
+                        <div style="display: flex; gap: 8px;">
+                            <div class="form-group" style="flex:1;">
+                                <label id="lbl-team1">أهداف الفريق الأول:</label>
+                                <input type="number" id="adm-score1" value="0" min="0">
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label id="lbl-team2">أهداف الفريق الثاني:</label>
+                                <input type="number" id="adm-score2" value="0" min="0">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>حالة المباراة:</label>
+                            <select id="adm-status">
+                                <option value="upcoming">لم تبدأ بعد</option>
+                                <option value="finished">انتهت المباراة</option>
+                            </select>
+                        </div>
+
+                        <div style="background: var(--bg-input); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <label style="color: var(--accent-emerald); font-weight: bold; margin-bottom: 6px; display: block;">إضافة هداف للمباراة:</label>
+                            <div style="display: flex; gap: 6px;">
+                                <select id="adm-player-select" style="flex: 1;"></select>
+                                <input type="number" id="adm-goals-num" value="1" min="1" style="width: 50px; text-align: center;">
+                                <button onclick="addScorerToMatch()" style="background: var(--accent-emerald); color: white; border: none; padding: 0 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">إضافة</button>
+                            </div>
+                            <div id="adm-match-scorers-list" style="margin-top: 8px;"></div>
+                        </div>
+
+                        <button class="btn-submit" id="btn-save-data" onclick="saveAdminData()">حفظ التعديلات بالسحابة (Supabase)</button>
+                        <button onclick="resetAllData()" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid #ef4444; padding: 8px; border-radius: 6px; font-size: 11px; margin-top: 10px; cursor: pointer;">إعادة ضبط البيانات للوضع الافتراضي</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            إعداد وتطوير: أيمن | دوري مديرية ميدي للمحترفين 2026
+        </div>
+
+    </div>
+
+    <!-- الشريط السفلي للتنقل -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="nav-matches" onclick="openTab('matches')">
+            <span>📅</span>المباريات
+        </button>
+        <button class="nav-item" id="nav-standings" onclick="openTab('standings')">
+            <span>🏆</span>الترتيب
+        </button>
+        <button class="nav-item" id="nav-news" onclick="openTab('news')">
+            <span>📰</span>الأخبار
+        </button>
+        <button class="nav-item" id="nav-teams" onclick="openTab('teams')">
+            <span>🛡️</span>الفرق
+        </button>
+        <button class="nav-item" id="nav-scorers" onclick="openTab('scorers')">
+            <span>⚽</span>الهدافون
+        </button>
+    </nav>
+
+    <script>
+        // ربط Supabase الخاص بك المباشر
+        var SUPABASE_URL = "https://zvrskcferjktyjkrbtdp.supabase.co";
+        var SUPABASE_KEY = "sb_publishable_GzjhjEuoRjoaamIiNUhARA_7qDXYQoJ";
+        var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        var BASE_DATA = {
+            teams: [
+                { id: 'alforsan', name: 'الفرسان', logo: 'https://i.postimg.cc/44BQ2WGZ/IMG-20260829-231743.png' },
+                { id: 'alzaeem', name: 'الزعيم', logo: 'https://i.postimg.cc/fRht9cBK/IMG-20260829-231721.jpg' },
+                { id: 'almagd', name: 'المجد', logo: 'https://i.postimg.cc/jSWc7PGV/IMG-20260829-231638.png' },
+                { id: 'alsoqoor', name: 'الصقور', logo: 'https://i.postimg.cc/QtZfsC4n/IMG-20260829-232527.png' }
+            ],
+            players: {
+                'alforsan': [
+                    'علي محمد (حارس)', 'سعد جمال', 'صابر خوري', 'محمد هليلي', 'سلطان جمال', 'عادل علي حسين',
+                    'حسن عرار', 'علول محمد ابراهيم', 'ابراهيم ماجد', 'رياض خوري', 'محمد حسن جمال', 'حسين علي مهيم',
+                    'اسامه مصبح', 'حسن موزان', 'محمد عزي', 'طيب احمد', 'عمار محمد علي', 'اصيل علي',
+                    'صديق محمد', 'احمد طيب متنبك', 'ناصر جمال', 'خالد نجدي', 'ايوب جعيدي', 'سلطان فتيني'
+                ],
+                'alzaeem': [
+                    'حافظ متنبك (حارس)', 'خالد خوري', 'عبدالله جفري', 'يوسف عاتي', 'يحيى نجدي', 'رامي قحم',
+                    'علي دحباش', 'عبدالله فريد', 'تيسير', 'سلمان خالد', 'ابراهيم متنبك', 'عسيري',
+                    'وليد احمد', 'احمد موسى', 'محمد يحيى', 'عبده فتيني', 'رائد حسن', 'احمد محمد متنبك',
+                    'علي بخاش', 'محمد قشه', 'محمد علي حبجي', 'ماجد خوري', 'عبدالله موسى عاتي', 'هاني (مدافع)'
+                ],
+                'almagd': [
+                    'محمد جربحي (حارس)', 'محمد ناشف', 'فواز جفري', 'رعد حرملي', 'علي طيب قصير', 'أسعد دحباش',
+                    'عبدالله محمد كبير', 'عادل عاتي', 'عبدالله قبار', 'طلال ابكر', 'عبدالله خوري', 'عبدالله يوسف',
+                    'احمد شداد', 'إبراهيم أحمد', 'طارق علي', 'ناصر عرار', 'عبده بلوش', 'عبده الملك',
+                    'فواز علي', 'محمد صديق', 'علي خوري', 'عبدالله متنبك', 'أحمد عكرش', 'ماهو متنبك'
+                ],
+                'alsoqoor': [
+                    'علي عرار (حارس)', 'عيسى عاتي', 'فؤاد جمال', 'عبده محمد خوري', 'اياد حسن', 'حسام جفري',
+                    'ناجي مصبح', 'عبدالعزيز ابكر', 'احمد جلحوف', 'عبده عرار', 'سيف بيكر', 'إبراهيم عبده',
+                    'حسن ماجد', 'يحيى مارادونا', 'عجار محمد', 'علي بلوش', 'علي متنبك', 'محمد بخاش',
+                    'رمزي حرملي', 'علي هادي', 'رياض فايد', 'فؤاد محمد احمد', 'مراد عاتي', 'علي متنبك'
+                ]
+            },
+            matches: [
+                { id: 1, date: '28 أغسطس 2026', team1: 'الزعيم', team2: 'الفرسان', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
+                { id: 2, date: '30 أغسطس 2026', team1: 'المجد', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
+                { id: 3, date: '01 سبتمبر 2026', team1: 'الفرسان', team2: 'المجد', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
+                { id: 4, date: '03 سبتمبر 2026', team1: 'الزعيم', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
+                { id: 5, date: '05 سبتمبر 2026', team1: 'الفرسان', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
+                { id: 6, date: '07 سبتمبر 2026', team1: 'الزعيم', team2: 'المجد', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] }
+            ],
+            news: [
+                { id: 1, title: 'انطلاق دوري ميدي للمحترفين 2026', content: 'بحماس كبير انطلقت منافسات الدوري على ملعب بني فايد وسط حضور جماهيري غفير من مشجعي الفرق.', date: '2026-08-28' }
+            ]
+        };
+
+        var leagueData = BASE_DATA;
+        var activeTeam = 'alforsan';
+        var tempScorers = [];
+
+        async function loadData() {
+            var statusElem = document.getElementById('db-status-bar');
+            try {
+                var response = await _supabase.from('new_league_data').select('data').eq('id', 1).single();
+                if (response.data && response.data.data) {
+                    leagueData = response.data.data;
+                    statusElem.textContent = '🟢 متصل بـ Supabase - البيانات محدثة لحظياً';
+                } else {
+                    await saveData();
+                    statusElem.textContent = '🟢 تم إنشاء السجل السحابي الأول بـ Supabase';
+                }
+            } catch(e) {
+                console.error("Supabase load error:", e);
+                statusElem.textContent = '🟠 التخزين المحلي (تعذر الاتصال بالخادم)';
+                try {
+                    var local = localStorage.getItem('MIDI_LEAGUE_STORE_V2');
+                    if (local) leagueData = JSON.parse(local);
+                } catch(err){}
+            }
+            refreshUI();
+        }
+
+        async function saveData() {
+            try {
+                localStorage.setItem('MIDI_LEAGUE_STORE_V2', JSON.stringify(leagueData));
+                var response = await _supabase.from('new_league_data').upsert({ id: 1, data: leagueData });
+                if(response.error) throw response.error;
+            } catch(e) {
+                console.error("Supabase save error:", e);
+            }
+        }
+
+        function refreshUI() {
+            renderMatches();
+            renderStandings();
+            renderNews();
+            renderTeams();
+            renderScorers();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+        }
+
+        function getTeam(name) {
+            for(var i=0; i<leagueData.teams.length; i++) {
+                if(leagueData.teams[i].name === name) return leagueData.teams[i];
+            }
+            return leagueData.teams[0];
+        }
+
+        function openTab(tabId) {
+            var tabs = ['matches', 'standings', 'news', 'teams', 'scorers', 'admin'];
+            for(var i=0; i<tabs.length; i++) {
+                var t = tabs[i];
+                var sec = document.getElementById('sec-' + t);
+                var nav = document.getElementById('nav-' + t);
+                if(sec) sec.className = (t === tabId) ? '' : 'hidden';
+                if(nav) {
+                    if(t === tabId) nav.classList.add('active');
+                    else nav.classList.remove('active');
+                }
+            }
+            if(tabId === 'admin') initAdmin();
+        }
+
+        function renderMatches() {
+            var box = document.getElementById('matches-list');
+            if(!box) return;
+            var html = '';
+
+            for(var i=0; i<leagueData.matches.length; i++) {
+                var m = leagueData.matches[i];
+                var t1 = getTeam(m.team1);
+                var t2 = getTeam(m.team2);
+                var isFin = m.status === 'finished';
+
+                var scorersTxt = '';
+                if(isFin && m.scorers && m.scorers.length > 0) {
+                    var sArr = [];
+                    for(var k=0; k<m.scorers.length; k++) {
+                        sArr.push(m.scorers[k].name + ' (' + m.scorers[k].goals + ')');
+                    }
+                    scorersTxt = '<div class="scorers-info">⚽ الهدافون: ' + sArr.join(' • ') + '</div>';
+                }
+
+                html += '<div class="match-card">' +
+                    '<div class="match-header"><span>⏰ ' + m.date + ' • ' + m.time + '</span><span>' + (isFin ? 'انتهت' : 'قادمة') + '</span></div>' +
+                    '<div class="match-body">' +
+                        '<div class="team-box">' +
+                            '<img src="' + t1.logo + '" class="team-logo-img" alt="' + m.team1 + '">' +
+                            '<div class="team-name">' + m.team1 + '</div>' +
+                        '</div>' +
+                        '<div>' + (isFin ? '<div class="score-badge">' + m.score1 + ' - ' + m.score2 + '</div>' : '<div class="vs-badge">VS</div>') + '</div>' +
+                        '<div class="team-box">' +
+                            '<img src="' + t2.logo + '" class="team-logo-img" alt="' + m.team2 + '">' +
+                            '<div class="team-name">' + m.team2 + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    scorersTxt +
+                '</div>';
+            }
+            box.innerHTML = html;
+        }
+
+        function renderStandings() {
+            var tbody = document.getElementById('standings-body');
+            if(!tbody) return;
+
+            var stats = {};
+            for(var i=0; i<leagueData.teams.length; i++) {
+                var t = leagueData.teams[i];
+                stats[t.name] = { team: t, played:0, won:0, drawn:0, lost:0, gf:0, ga:0, diff:0, pts:0 };
+            }
+
+            for(var i=0; i<leagueData.matches.length; i++) {
+                var m = leagueData.matches[i];
+                if(m.status === 'finished') {
+                    var t1 = stats[m.team1];
+                    var t2 = stats[m.team2];
+                    var s1 = parseInt(m.score1)||0;
+                    var s2 = parseInt(m.score2)||0;
+
+                    t1.played++; t2.played++;
+                    t1.gf += s1; t1.ga += s2;
+                    t2.gf += s2; t2.ga += s1;
+
+                    if(s1 > s2) { t1.won++; t1.pts += 3; t2.lost++; }
+                    else if(s2 > s1) { t2.won++; t2.pts += 3; t1.lost++; }
+                    else { t1.drawn++; t1.pts += 1; t2.drawn++; t2.pts += 1; }
+                }
+            }
+
+            var list = [];
+            for(var k in stats) {
+                stats[k].diff = stats[k].gf - stats[k].ga;
+                list.push(stats[k]);
+            }
+            list.sort(function(a,b){
+                if(b.pts !== a.pts) return b.pts - a.pts;
+                if(b.diff !== a.diff) return b.diff - a.diff;
+                return b.gf - a.gf;
             });
 
-          if (error) {
-            alert('خطأ في الحفظ: ' + error.message);
-            return;
-          }
-          alert('تم الحفظ وتحديث البيانات بنجاح!');
-        } catch (error) {
-          alert('حدث خطأ في الاتصال بقاعدة البيانات');
-        }
-      }
-
-      function updateMatchScore(index, field, value) {
-        const updatedMatches = [...matches];
-        updatedMatches[index] = {
-          ...updatedMatches[index],
-          [field]: Math.max(0, Number(value) || 0)
-        };
-        setMatches(updatedMatches);
-      }
-
-      function markMatchAsPlayed(index) {
-        const updatedMatches = [...matches];
-        updatedMatches[index] = { ...updatedMatches[index], played: true };
-        setMatches(updatedMatches);
-        saveData(updatedMatches);
-      }
-
-      const standings = teams
-        .map((team) => ({
-          name: team.name,
-          logo: team.logo,
-          played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, points: 0
-        }))
-        .map((team) => {
-          const teamMatches = matches.filter(
-            (match) => match.played && (match.homeTeam === team.name || match.awayTeam === team.name)
-          );
-
-          const result = { ...team };
-          teamMatches.forEach((match) => {
-            const homeGoals = Number(match.homeGoals) || 0;
-            const awayGoals = Number(match.awayGoals) || 0;
-            result.played += 1;
-
-            if (match.homeTeam === team.name) {
-              result.goalsFor += homeGoals;
-              result.goalsAgainst += awayGoals;
-              if (homeGoals > awayGoals) { result.won += 1; result.points += 3; }
-              else if (homeGoals === awayGoals) { result.drawn += 1; result.points += 1; }
-              else { result.lost += 1; }
-            } else if (match.awayTeam === team.name) {
-              result.goalsFor += awayGoals;
-              result.goalsAgainst += homeGoals;
-              if (awayGoals > homeGoals) { result.won += 1; result.points += 3; }
-              else if (awayGoals === homeGoals) { result.drawn += 1; result.points += 1; }
-              else { result.lost += 1; }
+            var html = '';
+            for(var i=0; i<list.length; i++) {
+                var item = list[i];
+                var diffStr = item.diff > 0 ? '+' + item.diff : item.diff;
+                html += '<tr>' +
+                    '<td style="font-weight:bold; color:var(--accent-gold);">' + (i+1) + '</td>' +
+                    '<td>' +
+                        '<div class="team-td">' +
+                            '<img src="' + item.team.logo + '" style="width:22px; height:22px; object-fit:contain;">' +
+                            '<span>' + item.team.name + '</span>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td>' + item.played + '</td>' +
+                    '<td style="color:var(--accent-emerald); font-weight:bold;">' + item.won + '</td>' +
+                    '<td>' + item.drawn + '</td>' +
+                    '<td style="color:#f87171;">' + item.lost + '</td>' +
+                    '<td>' + item.gf + '</td>' +
+                    '<td>' + item.ga + '</td>' +
+                    '<td>' + diffStr + '</td>' +
+                    '<td style="font-weight:bold; color:var(--accent-gold);">' + item.pts + '</td>' +
+                '</tr>';
             }
-          });
+            tbody.innerHTML = html;
+        }
 
-          result.goalDifference = result.goalsFor - result.goalsAgainst;
-          return result;
-        })
-        .sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
+        function renderNews() {
+            var box = document.getElementById('news-list');
+            if(!box) return;
+            var html = '';
+            for(var i=0; i<leagueData.news.length; i++) {
+                var n = leagueData.news[i];
+                html += '<div class="card">' +
+                    '<div style="font-weight:bold; color:var(--accent-emerald); font-size:13px; margin-bottom:4px;">' + n.title + '</div>' +
+                    '<div style="font-size:11px; color:var(--text-secondary); margin-bottom:6px;">' + n.content + '</div>' +
+                    '<div style="font-size:9px; color:var(--text-secondary); opacity:0.7;">📅 ' + n.date + '</div>' +
+                '</div>';
+            }
+            box.innerHTML = html;
+        }
 
-      return (
-        <div className={darkMode ? 'bg-gray-900 text-white min-h-screen pb-20' : 'bg-gray-50 text-gray-900 min-h-screen pb-20'}>
-          <header className="bg-emerald-700 text-white p-4 shadow flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <img src={leagueLogo} alt="شعار الدوري" className="w-9 h-9 object-contain bg-white rounded-full p-1" />
-              <div>
-                <h1 className="font-bold text-sm">البطولة الجديدة</h1>
-                <p className="text-[10px] text-emerald-200">2026</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setDarkMode(!darkMode)} className="p-1 bg-emerald-800 rounded text-xs px-2">
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-              <button onClick={() => setIsAdmin(!isAdmin)} className="bg-amber-500 text-gray-900 px-2 py-1 rounded font-bold text-xs">
-                ⚙️ الإدارة
-              </button>
-            </div>
-          </header>
+        function renderTeams() {
+            var btnBox = document.getElementById('team-nav-buttons');
+            var squadBox = document.getElementById('team-squad-box');
+            if(!btnBox || !squadBox) return;
 
-          {isAdmin && (
-            <div className="p-3 bg-gray-800 border-b border-gray-700 m-2 rounded">
-              <h2 className="font-bold text-sm mb-2 text-amber-400">لوحة الإدارة</h2>
-              <input
-                type="password"
-                placeholder="أدخل رمز الأمان (aymanmidi)"
-                value={adminPin}
-                onChange={(e) => setAdminPin(e.target.value)}
-                className="p-2 rounded bg-gray-900 text-white border border-gray-700 text-xs w-full mb-2"
-              />
-              {adminPin === 'aymanmidi' && (
-                <div className="mt-2 max-h-60 overflow-y-auto">
-                  {matches.map((match, index) => (
-                    <div key={match.id} className="flex items-center justify-between gap-1 mb-2 bg-gray-900 p-2 rounded text-xs">
-                      <span className="w-16 truncate">{match.homeTeam}</span>
-                      <input type="number" min="0" value={match.homeGoals} onChange={(e) => updateMatchScore(index, 'homeGoals', e.target.value)} className="w-10 text-center bg-gray-800 text-white rounded p-1" />
-                      <span>-</span>
-                      <input type="number" min="0" value={match.awayGoals} onChange={(e) => updateMatchScore(index, 'awayGoals', e.target.value)} className="w-10 text-center bg-gray-800 text-white rounded p-1" />
-                      <span className="w-16 truncate text-left">{match.awayTeam}</span>
-                      <button onClick={() => markMatchAsPlayed(index)} className="bg-blue-600 px-2 py-1 rounded text-white text-[10px]">حفظ</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            var btnsHtml = '';
+            for(var i=0; i<leagueData.teams.length; i++) {
+                var t = leagueData.teams[i];
+                var isActive = t.id === activeTeam;
+                btnsHtml += '<button class="team-btn ' + (isActive ? 'active' : '') + '" onclick="selectTeam(\'' + t.id + '\')">' +
+                    '<img src="' + t.logo + '" style="width:26px; height:26px; object-fit:contain;">' +
+                    '<span>' + t.name + '</span>' +
+                '</button>';
+            }
+            btnBox.innerHTML = btnsHtml;
 
-          <main className="p-4 max-w-md mx-auto">
-            {loading ? (
-              <div className="text-center py-10 text-gray-400 text-sm">جاري تحميل البيانات...</div>
-            ) : (
-              <>
-                {activeTab === 'matches' && (
-                  <div>
-                    <h2 className="font-bold text-base mb-3 border-b pb-1">📅 جدول المباريات</h2>
-                    {matches.map((match) => (
-                      <div key={match.id} className={`p-3 mb-2 rounded shadow border text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                        <div className="flex justify-between items-center text-[10px] text-gray-400 mb-1">
-                          <span>المباراة #{match.id}</span>
-                          <span>{match.date}</span>
-                        </div>
-                        <div className="flex justify-between items-center font-bold">
-                          <span>{match.homeTeam}</span>
-                          <span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-xs">
-                            {match.played ? `${match.homeGoals} - ${match.awayGoals}` : 'VS'}
-                          </span>
-                          <span>{match.awayTeam}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            var players = leagueData.players[activeTeam] || [];
+            var playersHtml = '';
+            for(var i=0; i<players.length; i++) {
+                playersHtml += '<div class="player-card">⚽ ' + players[i] + '</div>';
+            }
 
-                {activeTab === 'standings' && (
-                  <div>
-                    <h2 className="font-bold text-base mb-3 border-b pb-1">🏆 جدول الترتيب</h2>
-                    <div className={`rounded shadow border overflow-x-auto ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                      <table className="w-full text-[10px] text-center">
-                        <thead className={darkMode ? 'bg-gray-900 text-emerald-400' : 'bg-gray-100 text-emerald-700'}>
-                          <tr>
-                            <th className="p-2">م</th>
-                            <th className="p-2 text-right">الفريق</th>
-                            <th className="p-2">ل</th>
-                            <th className="p-2">ف</th>
-                            <th className="p-2">ت</th>
-                            <th className="p-2">خ</th>
-                            <th className="p-2">له</th>
-                            <th className="p-2">عليه</th>
-                            <th className="p-2">+/-</th>
-                            <th className="p-2">ن</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {standings.map((team, index) => (
-                            <tr key={team.name} className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                              <td className="p-2 font-bold">{index + 1}</td>
-                              <td className="p-2 text-right">{team.name}</td>
-                              <td className="p-2">{team.played}</td>
-                              <td className="p-2 text-emerald-400">{team.won}</td>
-                              <td className="p-2">{team.drawn}</td>
-                              <td className="p-2">{team.lost}</td>
-                              <td className="p-2">{team.goalsFor}</td>
-                              <td className="p-2">{team.goalsAgainst}</td>
-                              <td className="p-2 font-bold">{team.goalDifference}</td>
-                              <td className="p-2 font-bold text-amber-400">{team.points}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </main>
+            squadBox.innerHTML = '<div class="section-title">تشكيلة الفريق (' + players.length + ' لاعب)</div>' +
+                '<div class="player-grid">' + playersHtml + '</div>';
+        }
 
-          <nav className={`fixed bottom-0 left-0 right-0 border-t flex justify-around p-2 text-xs font-bold ${darkMode ? 'bg-gray-900 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}>
-            <button onClick={() => setActiveTab('matches')} className={activeTab === 'matches' ? 'text-emerald-500' : ''}>📅 المباريات</button>
-            <button onClick={() => setActiveTab('standings')} className={activeTab === 'standings' ? 'text-emerald-500' : ''}>🏆 الترتيب</button>
-          </nav>
-        </div>
-      );
-    }
+        function selectTeam(id) {
+            activeTeam = id;
+            renderTeams();
+        }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<NewLeagueApp />);
-  </script>
+        function renderScorers() {
+            var box = document.getElementById('scorers-box');
+            if(!box) return;
+
+            var counts = {};
+            for(var i=0; i<leagueData.matches.length; i++) {
+                var m = leagueData.matches[i];
+                if(m.status === 'finished' && m.scorers) {
+                    for(var j=0; j<m.scorers.length; j++) {
+                        var s = m.scorers[j];
+                        counts[s.name] = (counts[s.name] || 0) + (parseInt(s.goals)||1);
+                    }
+                }
+            }
+
+            var arr = [];
+            for(var k in counts) arr.push([k, counts[k]]);
+            arr.sort(function(a,b){ return b[1] - a[1]; });
+
+            if(arr.length === 0) {
+                box.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:15px; font-size:11px;">لم يتم تسجيل أهداف حتى الآن</div>';
+                return;
+            }
+
+            var html = '';
+            for(var i=0; i<arr.length; i++) {
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); font-size:12px;">' +
+                    '<div style="font-weight:bold;">' + (i+1) + '. ' + arr[i][0] + '</div>' +
+                    '<div style="font-weight:bold; color:var(--accent-gold);">⚽ ' + arr[i][1] + ' أهداف</div>' +
+                '</div>';
+            }
+            box.innerHTML = html;
+        }
+
+        function authenticateAdmin() {
+            var pin = document.getElementById('admin-pin').value;
+            if(pin === 'aymanmidi') {
+                document.getElementById('admin-auth-box').classList.add('hidden');
+                document.getElementById('admin-panel-content').classList.remove('hidden');
+                initAdmin();
+            } else {
+                alert('رمز الأمان غير صحيح!');
+            }
+        }
+
+        function initAdmin() {
+            var sel = document.getElementById('adm-match-select');
+            if(!sel) return;
+            sel.innerHTML = '';
+
+            for(var i=0; i<leagueData.matches.length; i++) {
+                var m = leagueData.matches[i];
+                var opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = '(' + m.date + '): ' + m.team1 + ' × ' + m.team2;
+                sel.appendChild(opt);
+            }
+            onAdminSelectMatch();
+        }
+
+        function onAdminSelectMatch() {
+            var mId = parseInt(document.getElementById('adm-match-select').value);
+            var m = null;
+            for(var i=0; i<leagueData.matches.length; i++) {
+                if(leagueData.matches[i].id === mId) { m = leagueData.matches[i]; break; }
+            }
+            if(!m) return;
+
+            document.getElementById('lbl-team1').textContent = 'أهداف ' + m.team1 + ':';
+            document.getElementById('lbl-team2').textContent = 'أهداف ' + m.team2 + ':';
+            document.getElementById('adm-score1').value = m.score1 || 0;
+            document.getElementById('adm-score2').value = m.score2 || 0;
+            document.getElementById('adm-status').value = m.status || 'upcoming';
+
+            tempScorers = m.scorers ? JSON.parse(JSON.stringify(m.scorers)) : [];
+
+            var pSel = document.getElementById('adm-player-select');
+            pSel.innerHTML = '';
+
+            var t1 = getTeam(m.team1);
+            var t2 = getTeam(m.team2);
+            var p1 = leagueData.players[t1.id] || [];
+            var p2 = leagueData.players[t2.id] || [];
+
+            for(var i=0; i<p1.length; i++) {
+                var o = document.createElement('option');
+                o.value = p1[i];
+                o.textContent = p1[i] + ' (' + m.team1 + ')';
+                pSel.appendChild(o);
+            }
+            for(var i=0; i<p2.length; i++) {
+                var o = document.createElement('option');
+                o.value = p2[i];
+                o.textContent = p2[i] + ' (' + m.team2 + ')';
+                pSel.appendChild(o);
+            }
+
+            renderAdminScorersList();
+        }
+
+        function addScorerToMatch() {
+            var name = document.getElementById('adm-player-select').value;
+            var num = parseInt(document.getElementById('adm-goals-num').value)||1;
+            if(!name) return;
+
+            var found = false;
+            for(var i=0; i<tempScorers.length; i++) {
+                if(tempScorers[i].name === name) {
+                    tempScorers[i].goals += num;
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) tempScorers.push({ name: name, goals: num });
+            renderAdminScorersList();
+        }
+
+        function renderAdminScorersList() {
+            var box = document.getElementById('adm-match-scorers-list');
+            if(!box) return;
+            var html = '';
+            for(var i=0; i<tempScorers.length; i++) {
+                html += '<div style="font-size:11px; color:var(--accent-emerald); margin-top:4px;">⚽ ' + tempScorers[i].name + ' (' + tempScorers[i].goals + ' أهداف)</div>';
+            }
+            box.innerHTML = html;
+        }
+
+        async function saveAdminData() {
+            var btn = document.getElementById('btn-save-data');
+            btn.textContent = "جاري الحفظ بالسحابة...";
+            btn.disabled = true;
+
+            var mId = parseInt(document.getElementById('adm-match-select').value);
+            var m = null;
+            for(var i=0; i<leagueData.matches.length; i++) {
+                if(leagueData.matches[i].id === mId) { m = leagueData.matches[i]; break; }
+            }
+            
+            if(m) {
+                m.score1 = parseInt(document.getElementById('adm-score1').value)||0;
+                m.score2 = parseInt(document.getElementById('adm-score2').value)||0;
+                m.status = document.getElementById('adm-status').value;
+                m.scorers = tempScorers;
+
+                await saveData();
+                refreshUI();
+                alert('✓ تم حفظ نتيجة المباراة وتحديثها بالسحابة بنجاح!');
+            }
+
+            btn.textContent = "حفظ التعديلات بالسحابة (Supabase)";
+            btn.disabled = false;
+        }
+
+        async function resetAllData() {
+            if(confirm('هل تريد إعادة ضبط بيانات البطولة للوضع الافتراضي؟')) {
+                leagueData = BASE_DATA;
+                await saveData();
+                refreshUI();
+                initAdmin();
+                alert('تمت إعادة الضبط بنجاح!');
+            }
+        }
+
+        loadData();
+    </script>
 </body>
 </html>
