@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>دوري مديرية ميدي للمحترفين 2026</title>
     
-    <!-- مكتبة Supabase JS الرسمية -->
+    <!-- مكتبة Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- مكتبة التأثيرات الاحتفالية -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         :root {
@@ -18,6 +20,7 @@
             --text-secondary: #94a3b8;
             --accent-emerald: #10b981;
             --accent-gold: #f59e0b;
+            --accent-blue: #3b82f6;
         }
 
         .light-theme {
@@ -29,12 +32,13 @@
             --text-secondary: #64748b;
             --accent-emerald: #059669;
             --accent-gold: #d97706;
+            --accent-blue: #2563eb;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; transition: background-color 0.2s, color 0.2s; }
         body { background-color: var(--bg-main); color: var(--text-primary); padding-bottom: 70px; direction: rtl; }
         
-        /* الهيدر وشعار الدوري */
+        /* الهيدر */
         .header { background: #047857; color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
         .header-brand { display: flex; align-items: center; gap: 10px; }
@@ -46,16 +50,21 @@
 
         .container { max-width: 600px; margin: 15px auto; padding: 0 12px; }
         
+        /* العداد التنازلي */
+        .countdown-box { background: linear-gradient(135deg, #065f46, #047857); color: white; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .cd-title { font-size: 11px; opacity: 0.9; font-weight: bold; }
+        .cd-timer { font-size: 18px; font-weight: 900; color: var(--accent-gold); margin-top: 4px; letter-spacing: 1px; }
+
         /* بطاقات العرض */
         .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .section-title { font-size: 15px; font-weight: 700; color: var(--accent-gold); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+        .section-title { font-size: 15px; font-weight: 700; color: var(--accent-gold); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
 
-        /* حالة الاتصال بالقاعدة */
         .db-status { font-size: 10px; text-align: center; padding: 4px; border-radius: 4px; margin-bottom: 10px; background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald); font-weight: bold; }
 
-        /* جدول المباريات */
-        .match-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-        .match-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+        /* المباريات */
+        .match-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 10px; position: relative; }
+        .match-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; }
+        .stage-badge { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; border: 1px solid rgba(59, 130, 246, 0.3); }
         .match-body { display: flex; align-items: center; justify-content: space-between; }
         .team-box { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
         .team-logo-img { width: 42px; height: 42px; object-fit: contain; background: rgba(255,255,255,0.05); border-radius: 50%; padding: 2px; border: 1px solid var(--border-color); }
@@ -64,6 +73,13 @@
         .vs-badge { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
         .scorers-info { font-size: 11px; color: var(--accent-emerald); margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
 
+        /* نظام التصويت */
+        .poll-box { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+        .poll-title { font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; text-align: center; }
+        .poll-btns { display: flex; gap: 6px; }
+        .poll-btn { flex: 1; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold; }
+        .poll-btn:hover { border-color: var(--accent-emerald); }
+
         /* الجدول */
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }
@@ -71,24 +87,28 @@
         td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
         .team-td { display: flex; align-items: center; gap: 6px; text-align: right; min-width: 100px; font-weight: bold; }
 
-        /* الفرق واللاعبين */
+        /* الفيديو والأخبار */
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; margin-top: 8px; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+
+        /* التنسيقات العامة */
         .team-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
         .team-btn { padding: 8px 4px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-secondary); font-weight: bold; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .team-btn.active { border-color: var(--accent-emerald); color: var(--accent-emerald); background: rgba(16, 185, 129, 0.1); }
         .player-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
         .player-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 6px 8px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px; }
 
-        /* لوحة التحكم */
         .admin-form { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
-        input, select { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 6px; font-size: 12px; outline: none; }
+        input, select, textarea { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 6px; font-size: 12px; outline: none; }
         .btn-submit { background: var(--accent-emerald); color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-        /* الشريط السفلي */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-space-around; padding: 8px 0; z-index: 100; }
         .nav-item { border: none; background: transparent; color: var(--text-secondary); font-size: 10px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: var(--accent-emerald); }
         .nav-item span { font-size: 16px; }
+
+        .share-btn { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
 
         .footer { text-align: center; font-size: 10px; color: var(--text-secondary); margin-top: 20px; }
         .hidden { display: none !important; }
@@ -115,16 +135,28 @@
     <div class="container">
         <div id="db-status-bar" class="db-status">⚡ جاري الاتصال بقاعدة البيانات السحابية (Supabase)...</div>
 
+        <!-- العداد التنازلي للمباراة القادمة -->
+        <div class="countdown-box" id="countdown-container">
+            <div class="cd-title">⏳ المباراة القادمة تبدأ بعد:</div>
+            <div class="cd-timer" id="cd-timer-text">00 يوم : 00 ساعة : 00 دقيقة</div>
+        </div>
+
         <!-- تبويب المباريات -->
         <div id="sec-matches">
-            <div class="section-title">📅 جدول مواعيد المباريات</div>
+            <div class="section-title">
+                <span>📅 جدول مواعيد المباريات</span>
+                <button class="share-btn" onclick="shareMatches()">🔗 مشاركة الجدول</button>
+            </div>
             <div id="matches-list"></div>
         </div>
 
         <!-- تبويب الترتيب -->
         <div id="sec-standings" class="hidden">
             <div class="card">
-                <div class="section-title">🏆 جدول الترتيب العام</div>
+                <div class="section-title">
+                    <span>🏆 جدول الترتيب العام</span>
+                    <button class="share-btn" onclick="shareStandings()">🔗 مشاركة الترتيب</button>
+                </div>
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -147,9 +179,9 @@
             </div>
         </div>
 
-        <!-- تبويب الأخبار -->
+        <!-- تبويب الأخبار بالفيديو -->
         <div id="sec-news" class="hidden">
-            <div class="section-title">📰 مستجدات البطولة</div>
+            <div class="section-title">📰 مستجدات وفيديوهات البطولة</div>
             <div id="news-list"></div>
         </div>
 
@@ -175,26 +207,46 @@
                 <div id="admin-auth-box">
                     <div class="form-group">
                         <label>أدخل رمز الأمان للوصول للوحة التحكم:</label>
-                        <!-- تم إزالة رمز الأدمن من النص التوضيحي للحفاظ على الخصوصية -->
-                        <input type="password" id="admin-pin" placeholder="أدخل كلمة المرور">
+                        <input type="text" id="admin-pin" placeholder="أدخل كلمة المرور" style="-webkit-text-security: disk; text-security: disk;">
                     </div>
                     <button class="btn-submit" style="margin-top: 8px;" onclick="authenticateAdmin()">تسجيل الدخول</button>
                 </div>
 
                 <div id="admin-panel-content" class="hidden">
+                    <!-- نموذج إضافة مباراة جديدة -->
+                    <div class="admin-form" style="border-bottom: 1px dashed var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+                        <label style="color: var(--accent-gold); font-weight: bold;">➕ إضافة مباراة جديدة (ذهاب / إياب):</label>
+                        <div style="display: flex; gap: 6px;">
+                            <select id="adm-add-t1" style="flex:1;"></select>
+                            <select id="adm-add-t2" style="flex:1;"></select>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="adm-add-date" placeholder="التاريخ (مثال: 02 سبتمبر)" style="flex:1;">
+                            <select id="adm-add-stage" style="flex:1;">
+                                <option value="ذهاب">مباراة ذهاب</option>
+                                <option value="إياب">مباراة إياب</option>
+                                <option value="المجموعات">دور المجموعات</option>
+                                <option value="نصف النهائي">نصف النهائي</option>
+                                <option value="النهائي">النهائي</option>
+                            </select>
+                        </div>
+                        <button onclick="addNewMatch()" style="background: var(--accent-blue); color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer;">إضافة المباراة للجدول</button>
+                    </div>
+
+                    <!-- نموذج حفظ النتائج -->
                     <div class="admin-form">
+                        <label style="color: var(--accent-emerald); font-weight: bold;">📝 تعديل نتائج مباراة:</label>
                         <div class="form-group">
-                            <label>اختر المباراة لتعديل النتيجة:</label>
                             <select id="adm-match-select" onchange="onAdminSelectMatch()"></select>
                         </div>
                         
                         <div style="display: flex; gap: 8px;">
                             <div class="form-group" style="flex:1;">
-                                <label id="lbl-team1">أهداف الفريق الأول:</label>
+                                <label id="lbl-team1">أهداف الأول:</label>
                                 <input type="number" id="adm-score1" value="0" min="0">
                             </div>
                             <div class="form-group" style="flex:1;">
-                                <label id="lbl-team2">أهداف الفريق الثاني:</label>
+                                <label id="lbl-team2">أهداف الثاني:</label>
                                 <input type="number" id="adm-score2" value="0" min="0">
                             </div>
                         </div>
@@ -217,7 +269,16 @@
                             <div id="adm-match-scorers-list" style="margin-top: 8px;"></div>
                         </div>
 
-                        <button class="btn-submit" id="btn-save-data" onclick="saveAdminData()">حفظ التعديلات بالسحابة (Supabase)</button>
+                        <!-- نموذج رفع فيديو / خبر -->
+                        <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 6px;">
+                            <label style="color: var(--accent-gold); font-weight: bold; display:block; margin-bottom: 6px;">📽️ نشر خبر أو فيديو مباراة:</label>
+                            <input type="text" id="adm-news-title" placeholder="عنوان الخبر / الفيديو" style="width:100%; margin-bottom:6px;">
+                            <textarea id="adm-news-content" placeholder="وصف الخبر..." style="width:100%; height:50px; margin-bottom:6px;"></textarea>
+                            <input type="text" id="adm-news-video" placeholder="رابط فيديو YouTube (اختياري)" style="width:100%; margin-bottom:6px;">
+                            <button onclick="addNewsWithVideo()" style="background: var(--accent-gold); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">نشر الخبر والفيديو</button>
+                        </div>
+
+                        <button class="btn-submit" id="btn-save-data" onclick="saveAdminData()" style="margin-top: 10px;">حفظ والتحديث بالسحابة (Supabase)</button>
                         <button onclick="resetAllData()" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid #ef4444; padding: 8px; border-radius: 6px; font-size: 11px; margin-top: 10px; cursor: pointer;">إعادة ضبط البيانات للوضع الافتراضي</button>
                     </div>
                 </div>
@@ -250,7 +311,6 @@
     </nav>
 
     <script>
-        // ربط Supabase الخاص بك المباشر
         var SUPABASE_URL = "https://zvrskcferjktyjkrbtdp.supabase.co";
         var SUPABASE_KEY = "sb_publishable_GzjhjEuoRjoaamIiNUhARA_7qDXYQoJ";
         var _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -289,15 +349,12 @@
                 ]
             },
             matches: [
-                { id: 1, date: '28 أغسطس 2026', team1: 'الزعيم', team2: 'الفرسان', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
-                { id: 2, date: '30 أغسطس 2026', team1: 'المجد', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
-                { id: 3, date: '01 سبتمبر 2026', team1: 'الفرسان', team2: 'المجد', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
-                { id: 4, date: '03 سبتمبر 2026', team1: 'الزعيم', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
-                { id: 5, date: '05 سبتمبر 2026', team1: 'الفرسان', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] },
-                { id: 6, date: '07 سبتمبر 2026', team1: 'الزعيم', team2: 'المجد', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', scorers: [] }
+                { id: 1, date: '28 أغسطس 2026', team1: 'الزعيم', team2: 'الفرسان', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'ذهاب', scorers: [], polls: {t1:0, t2:0} },
+                { id: 2, date: '30 أغسطس 2026', team1: 'المجد', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'ذهاب', scorers: [], polls: {t1:0, t2:0} },
+                { id: 3, date: '01 سبتمبر 2026', team1: 'الفرسان', team2: 'المجد', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'ذهاب', scorers: [], polls: {t1:0, t2:0} }
             ],
             news: [
-                { id: 1, title: 'انطلاق دوري ميدي للمحترفين 2026', content: 'بحماس كبير انطلقت منافسات الدوري على ملعب بني فايد وسط حضور جماهيري غفير من مشجعي الفرق.', date: '2026-08-28' }
+                { id: 1, title: 'انطلاق دوري ميدي للمحترفين 2026', content: 'بحماس كبير انطلقت منافسات الدوري على ملعب بني فايد.', videoUrl: '', date: '2026-08-28' }
             ]
         };
 
@@ -325,6 +382,7 @@
                 } catch(err){}
             }
             refreshUI();
+            startCountdown();
         }
 
         async function saveData() {
@@ -332,9 +390,7 @@
                 localStorage.setItem('MIDI_LEAGUE_STORE_V2', JSON.stringify(leagueData));
                 var response = await _supabase.from('new_league_data').upsert({ id: 1, data: leagueData });
                 if(response.error) throw response.error;
-            } catch(e) {
-                console.error("Supabase save error:", e);
-            }
+            } catch(e) { console.error("Supabase save error:", e); }
         }
 
         function refreshUI() {
@@ -345,9 +401,7 @@
             renderScorers();
         }
 
-        function toggleTheme() {
-            document.body.classList.toggle('light-theme');
-        }
+        function toggleTheme() { document.body.classList.toggle('light-theme'); }
 
         function getTeam(name) {
             for(var i=0; i<leagueData.teams.length; i++) {
@@ -368,7 +422,31 @@
                     else nav.classList.remove('active');
                 }
             }
+            if(tabId === 'standings') triggerConfetti();
             if(tabId === 'admin') initAdmin();
+        }
+
+        function triggerConfetti() {
+            try { confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } }); } catch(e){}
+        }
+
+        function startCountdown() {
+            var timerElem = document.getElementById('cd-timer-text');
+            // احتساب وقت عشوائي ممثل للمباراة القادمة لغرض التجميل
+            var target = new Date().getTime() + (18 * 3600 * 1000); 
+
+            setInterval(function() {
+                var now = new Date().getTime();
+                var diff = target - now;
+                if(diff > 0) {
+                    var hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    var secs = Math.floor((diff % (1000 * 60)) / 1000);
+                    timerElem.textContent = hrs + ' ساعة : ' + mins + ' دقيقة : ' + secs + ' ثانية';
+                } else {
+                    timerElem.textContent = '⚽ المباراة جارية الآن!';
+                }
+            }, 1000);
         }
 
         function renderMatches() {
@@ -391,23 +469,53 @@
                     scorersTxt = '<div class="scorers-info">⚽ الهدافون: ' + sArr.join(' • ') + '</div>';
                 }
 
+                var pollHtml = '';
+                if(!isFin) {
+                    var p1 = (m.polls && m.polls.t1) || 0;
+                    var p2 = (m.polls && m.polls.t2) || 0;
+                    pollHtml = '<div class="poll-box">' +
+                        '<div class="poll-title">📊 تصويت الجماهير: من يتوقع فوزه؟</div>' +
+                        '<div class="poll-btns">' +
+                            '<button class="poll-btn" onclick="voteMatch(' + m.id + ', 1)">' + m.team1 + ' (' + p1 + ')</button>' +
+                            '<button class="poll-btn" onclick="voteMatch(' + m.id + ', 2)">' + m.team2 + ' (' + p2 + ')</button>' +
+                        '</div>' +
+                    '</div>';
+                }
+
                 html += '<div class="match-card">' +
-                    '<div class="match-header"><span>⏰ ' + m.date + ' • ' + m.time + '</span><span>' + (isFin ? 'انتهت' : 'قادمة') + '</span></div>' +
+                    '<div class="match-header">' +
+                        '<span>⏰ ' + m.date + ' • ' + (m.time || '04:30 مساءً') + '</span>' +
+                        '<span class="stage-badge">' + (m.stage || 'ذهاب') + '</span>' +
+                    '</div>' +
                     '<div class="match-body">' +
                         '<div class="team-box">' +
-                            '<img src="' + t1.logo + '" class="team-logo-img" alt="' + m.team1 + '">' +
+                            '<img src="' + t1.logo + '" class="team-logo-img">' +
                             '<div class="team-name">' + m.team1 + '</div>' +
                         '</div>' +
                         '<div>' + (isFin ? '<div class="score-badge">' + m.score1 + ' - ' + m.score2 + '</div>' : '<div class="vs-badge">VS</div>') + '</div>' +
                         '<div class="team-box">' +
-                            '<img src="' + t2.logo + '" class="team-logo-img" alt="' + m.team2 + '">' +
+                            '<img src="' + t2.logo + '" class="team-logo-img">' +
                             '<div class="team-name">' + m.team2 + '</div>' +
                         '</div>' +
                     '</div>' +
                     scorersTxt +
+                    pollHtml +
                 '</div>';
             }
             box.innerHTML = html;
+        }
+
+        async function voteMatch(mId, teamNum) {
+            for(var i=0; i<leagueData.matches.length; i++) {
+                if(leagueData.matches[i].id === mId) {
+                    if(!leagueData.matches[i].polls) leagueData.matches[i].polls = {t1:0, t2:0};
+                    if(teamNum === 1) leagueData.matches[i].polls.t1++;
+                    else leagueData.matches[i].polls.t2++;
+                    break;
+                }
+            }
+            await saveData();
+            renderMatches();
         }
 
         function renderStandings() {
@@ -428,13 +536,15 @@
                     var s1 = parseInt(m.score1)||0;
                     var s2 = parseInt(m.score2)||0;
 
-                    t1.played++; t2.played++;
-                    t1.gf += s1; t1.ga += s2;
-                    t2.gf += s2; t2.ga += s1;
+                    if(t1 && t2) {
+                        t1.played++; t2.played++;
+                        t1.gf += s1; t1.ga += s2;
+                        t2.gf += s2; t2.ga += s1;
 
-                    if(s1 > s2) { t1.won++; t1.pts += 3; t2.lost++; }
-                    else if(s2 > s1) { t2.won++; t2.pts += 3; t1.lost++; }
-                    else { t1.drawn++; t1.pts += 1; t2.drawn++; t2.pts += 1; }
+                        if(s1 > s2) { t1.won++; t1.pts += 3; t2.lost++; }
+                        else if(s2 > s1) { t2.won++; t2.pts += 3; t1.lost++; }
+                        else { t1.drawn++; t1.pts += 1; t2.drawn++; t2.pts += 1; }
+                    }
                 }
             }
 
@@ -455,12 +565,7 @@
                 var diffStr = item.diff > 0 ? '+' + item.diff : item.diff;
                 html += '<tr>' +
                     '<td style="font-weight:bold; color:var(--accent-gold);">' + (i+1) + '</td>' +
-                    '<td>' +
-                        '<div class="team-td">' +
-                            '<img src="' + item.team.logo + '" style="width:22px; height:22px; object-fit:contain;">' +
-                            '<span>' + item.team.name + '</span>' +
-                        '</div>' +
-                    '</td>' +
+                    '<td><div class="team-td"><img src="' + item.team.logo + '" style="width:22px; height:22px; object-fit:contain;"><span>' + item.team.name + '</span></div></td>' +
                     '<td>' + item.played + '</td>' +
                     '<td style="color:var(--accent-emerald); font-weight:bold;">' + item.won + '</td>' +
                     '<td>' + item.drawn + '</td>' +
@@ -474,16 +579,29 @@
             tbody.innerHTML = html;
         }
 
+        function formatYoutubeUrl(url) {
+            if(!url) return '';
+            var regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            var match = url.match(regExp);
+            return (match && match[2].length == 11) ? 'https://www.youtube.com/embed/' + match[2] : url;
+        }
+
         function renderNews() {
             var box = document.getElementById('news-list');
             if(!box) return;
             var html = '';
             for(var i=0; i<leagueData.news.length; i++) {
                 var n = leagueData.news[i];
+                var videoHtml = '';
+                if(n.videoUrl) {
+                    var embedUrl = formatYoutubeUrl(n.videoUrl);
+                    videoHtml = '<div class="video-container"><iframe src="' + embedUrl + '" allowfullscreen></iframe></div>';
+                }
                 html += '<div class="card">' +
                     '<div style="font-weight:bold; color:var(--accent-emerald); font-size:13px; margin-bottom:4px;">' + n.title + '</div>' +
                     '<div style="font-size:11px; color:var(--text-secondary); margin-bottom:6px;">' + n.content + '</div>' +
-                    '<div style="font-size:9px; color:var(--text-secondary); opacity:0.7;">📅 ' + n.date + '</div>' +
+                    videoHtml +
+                    '<div style="font-size:9px; color:var(--text-secondary); opacity:0.7; margin-top:6px;">📅 ' + n.date + '</div>' +
                 '</div>';
             }
             box.innerHTML = html;
@@ -511,14 +629,10 @@
                 playersHtml += '<div class="player-card">⚽ ' + players[i] + '</div>';
             }
 
-            squadBox.innerHTML = '<div class="section-title">تشكيلة الفريق (' + players.length + ' لاعب)</div>' +
-                '<div class="player-grid">' + playersHtml + '</div>';
+            squadBox.innerHTML = '<div class="section-title">تشكيلة الفريق (' + players.length + ' لاعب)</div><div class="player-grid">' + playersHtml + '</div>';
         }
 
-        function selectTeam(id) {
-            activeTeam = id;
-            renderTeams();
-        }
+        function selectTeam(id) { activeTeam = id; renderTeams(); }
 
         function renderScorers() {
             var box = document.getElementById('scorers-box');
@@ -560,24 +674,60 @@
                 document.getElementById('admin-auth-box').classList.add('hidden');
                 document.getElementById('admin-panel-content').classList.remove('hidden');
                 initAdmin();
-            } else {
-                alert('رمز الأمان غير صحيح!');
-            }
+            } else { alert('رمز الأمان غير صحيح!'); }
         }
 
         function initAdmin() {
             var sel = document.getElementById('adm-match-select');
+            var t1Sel = document.getElementById('adm-add-t1');
+            var t2Sel = document.getElementById('adm-add-t2');
             if(!sel) return;
-            sel.innerHTML = '';
+            
+            sel.innerHTML = ''; t1Sel.innerHTML = ''; t2Sel.innerHTML = '';
+
+            for(var i=0; i<leagueData.teams.length; i++) {
+                var t = leagueData.teams[i];
+                t1Sel.appendChild(new Option(t.name, t.name));
+                t2Sel.appendChild(new Option(t.name, t.name));
+            }
 
             for(var i=0; i<leagueData.matches.length; i++) {
                 var m = leagueData.matches[i];
                 var opt = document.createElement('option');
                 opt.value = m.id;
-                opt.textContent = '(' + m.date + '): ' + m.team1 + ' × ' + m.team2;
+                opt.textContent = '(' + (m.stage||'ذهاب') + ') ' + m.team1 + ' × ' + m.team2;
                 sel.appendChild(opt);
             }
             onAdminSelectMatch();
+        }
+
+        async function addNewMatch() {
+            var t1 = document.getElementById('adm-add-t1').value;
+            var t2 = document.getElementById('adm-add-t2').value;
+            var date = document.getElementById('adm-add-date').value || '01 سبتمبر 2026';
+            var stage = document.getElementById('adm-add-stage').value;
+
+            if(t1 === t2) { alert('اختر فريقين مختلفين!'); return; }
+
+            var newMatch = {
+                id: Date.now(),
+                date: date,
+                team1: t1,
+                team2: t2,
+                score1: 0,
+                score2: 0,
+                status: 'upcoming',
+                time: '04:30 مساءً',
+                stage: stage,
+                scorers: [],
+                polls: {t1:0, t2:0}
+            };
+
+            leagueData.matches.push(newMatch);
+            await saveData();
+            refreshUI();
+            initAdmin();
+            alert('✓ تم إضافة المباراة الجديدة بنجاح!');
         }
 
         function onAdminSelectMatch() {
@@ -604,18 +754,8 @@
             var p1 = leagueData.players[t1.id] || [];
             var p2 = leagueData.players[t2.id] || [];
 
-            for(var i=0; i<p1.length; i++) {
-                var o = document.createElement('option');
-                o.value = p1[i];
-                o.textContent = p1[i] + ' (' + m.team1 + ')';
-                pSel.appendChild(o);
-            }
-            for(var i=0; i<p2.length; i++) {
-                var o = document.createElement('option');
-                o.value = p2[i];
-                o.textContent = p2[i] + ' (' + m.team2 + ')';
-                pSel.appendChild(o);
-            }
+            for(var i=0; i<p1.length; i++) pSel.appendChild(new Option(p1[i] + ' (' + m.team1 + ')', p1[i]));
+            for(var i=0; i<p2.length; i++) pSel.appendChild(new Option(p2[i] + ' (' + m.team2 + ')', p2[i]));
 
             renderAdminScorersList();
         }
@@ -627,17 +767,11 @@
 
             var found = false;
             for(var i=0; i<tempScorers.length; i++) {
-                if(tempScorers[i].name === name) {
-                    tempScorers[i].goals += num;
-                    found = true;
-                    break;
-                }
+                if(tempScorers[i].name === name) { tempScorers[i].goals += num; found = true; break; }
             }
             if(!found) tempScorers.push({ name: name, goals: num });
             
-            // تحويل حالة المباراة تلقائياً إلى انتهت لضمان احتساب الأهداف
             document.getElementById('adm-status').value = 'finished';
-            
             renderAdminScorersList();
         }
 
@@ -651,10 +785,30 @@
             box.innerHTML = html;
         }
 
+        async function addNewsWithVideo() {
+            var title = document.getElementById('adm-news-title').value;
+            var content = document.getElementById('adm-news-content').value;
+            var videoUrl = document.getElementById('adm-news-video').value;
+
+            if(!title) { alert('يرجى إدخال عنوان الخبر'); return; }
+
+            var newsItem = {
+                id: Date.now(),
+                title: title,
+                content: content,
+                videoUrl: videoUrl,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            leagueData.news.unshift(newsItem);
+            await saveData();
+            refreshUI();
+            alert('✓ تم نشر الخبر/الفيديو بنجاح!');
+        }
+
         async function saveAdminData() {
             var btn = document.getElementById('btn-save-data');
-            btn.textContent = "جاري الحفظ بالسحابة...";
-            btn.disabled = true;
+            btn.textContent = "جاري الحفظ بالسحابة..."; btn.disabled = true;
 
             var mId = parseInt(document.getElementById('adm-match-select').value);
             var m = null;
@@ -665,21 +819,35 @@
             if(m) {
                 m.score1 = parseInt(document.getElementById('adm-score1').value)||0;
                 m.score2 = parseInt(document.getElementById('adm-score2').value)||0;
-                // ضبط الحالة تلقائياً إلى "انتهت" إن كان هناك أهداف أو نتائج مسجلة
                 m.status = document.getElementById('adm-status').value;
                 m.scorers = tempScorers;
 
                 await saveData();
                 refreshUI();
-                alert('✓ تم حفظ نتيجة المباراة وتحديثها بالسحابة بنجاح!');
+                alert('✓ تم حفظ نتائج وتحديث السحابة بنجاح!');
             }
 
-            btn.textContent = "حفظ التعديلات بالسحابة (Supabase)";
-            btn.disabled = false;
+            btn.textContent = "حفظ والتحديث بالسحابة (Supabase)"; btn.disabled = false;
+        }
+
+        function shareMatches() {
+            var text = "🏆 جدول مباريات دوري ميدي للمحترفين 2026:\n";
+            for(var i=0; i<leagueData.matches.length; i++) {
+                var m = leagueData.matches[i];
+                text += "• " + m.team1 + " × " + m.team2 + " (" + (m.status==='finished' ? m.score1 + '-' + m.score2 : m.date) + ")\n";
+            }
+            navigator.clipboard.writeText(text);
+            alert("تم نسخ جدول المباريات بنجاح! يمكنك لصقه ومشاركته الآن.");
+        }
+
+        function shareStandings() {
+            var text = "🏆 ترتيب دوري ميدي للمحترفين 2026 حوّلك الآن للمشاهدة والتفاصيل!";
+            navigator.clipboard.writeText(text);
+            alert("تم نسخ رابط ورسالة الترتيب بنجاح!");
         }
 
         async function resetAllData() {
-            if(confirm('هل تريد إعادة ضبط بيانات البطولة للوضع الافتراضي؟')) {
+            if(confirm('هل تريد إعادة ضبط كافة البيانات للوضع الافتراضي؟')) {
                 leagueData = BASE_DATA;
                 await saveData();
                 refreshUI();
