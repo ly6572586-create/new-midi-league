@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>دوري ميدي للمحترفين 2026</title>
-    <link rel="icon" href="data:,">
     
     <!-- خط القاهرة الاحترافي من Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -340,7 +339,7 @@
                     cards: [{name: 'رياض خوري', type: 'red'}, {name: 'محمد ناشف', type: 'yellow'}, {name: 'عبده بلوش', type: 'yellow'}, {name: 'ماهر متنبك', type: 'yellow'}, {name: 'عبده الملك', type: 'yellow'}], 
                     polls: {t1:0, t2:0} 
                 },
-                { id: 4, date: '03 سبتمبر 2026', team1: 'الزعيم', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'الجولة 2', scorers: [], cards: [], polls: {t1:0, t2:0} },
+                { id: 4, date: '04 سبتمبر 2026', team1: 'الزعيم', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'الجولة 2', scorers: [], cards: [], polls: {t1:0, t2:0} },
                 { id: 5, date: '06 سبتمبر 2026', team1: 'المجد', team2: 'الزعيم', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'الجولة 3', scorers: [], cards: [], polls: {t1:0, t2:0} },
                 { id: 6, date: '08 سبتمبر 2026', team1: 'الفرسان', team2: 'الصقور', score1: 0, score2: 0, status: 'upcoming', time: '04:30 مساءً', stage: 'الجولة 3', scorers: [], cards: [], polls: {t1:0, t2:0} }
             ],
@@ -356,48 +355,27 @@
 
         async function loadData() {
             try {
-                var response = await _supabase
-                    .from('new_league_data')
-                    .select('data')
-                    .eq('id', 1)
-                    .maybeSingle();
-
-                if (response.error) throw response.error;
-
+                var response = await _supabase.from('league_data').select('data').eq('id', 1).single();
                 if (response.data && response.data.data) {
                     leagueData = response.data.data;
-                    localStorage.setItem('MIDI_LEAGUE_STORE_V4', JSON.stringify(leagueData));
                 } else {
                     await saveData();
                 }
             } catch(e) {
-                console.error('خطأ تحميل البيانات من Supabase:', e);
                 try {
                     var local = localStorage.getItem('MIDI_LEAGUE_STORE_V4');
                     if (local) leagueData = JSON.parse(local);
-                } catch(err) {
-                    console.error('خطأ قراءة النسخة المحلية:', err);
-                }
+                } catch(err){}
             }
-
             refreshUI();
             startCountdown();
         }
 
         async function saveData() {
-            // نحفظ محلياً أولاً حتى لا تضيع آخر نتيجة على نفس الجهاز.
-            localStorage.setItem('MIDI_LEAGUE_STORE_V4', JSON.stringify(leagueData));
-
-            var response = await _supabase
-                .from('new_league_data')
-                .upsert({ id: 1, data: leagueData }, { onConflict: 'id' });
-
-            if (response.error) {
-                console.error('خطأ حفظ البيانات في Supabase:', response.error);
-                throw response.error;
-            }
-
-            return true;
+            try {
+                localStorage.setItem('MIDI_LEAGUE_STORE_V4', JSON.stringify(leagueData));
+                await _supabase.from('league_data').upsert({ id: 1, data: leagueData });
+            } catch(e){}
         }
 
         function refreshUI() {
@@ -437,72 +415,22 @@
             try { confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } }); } catch(e){}
         }
 
-        var countdownInterval = null;
-
-        function getMatchDateTime(match) {
-            // كل مباريات الدوري الساعة 04:30 مساءً، ووقت التاريخ يُفسر بتوقيت الجهاز.
-            var parts = (match.date || '').match(/(\\d+)\\s+(.*)\\s+(\\d{4})/);
-            if(!parts) return NaN;
-
-            var day = parseInt(parts[1], 10);
-            var monthName = parts[2].trim();
-            var year = parseInt(parts[3], 10);
-
-            var months = {
-                'يناير': 0, 'فبراير': 1, 'مارس': 2, 'أبريل': 3,
-                'مايو': 4, 'يونيو': 5, 'يوليو': 6, 'أغسطس': 7,
-                'سبتمبر': 8, 'أكتوبر': 9, 'نوفمبر': 10, 'ديسمبر': 11
-            };
-
-            var month = months[monthName];
-            if(month === undefined) return NaN;
-
-            return new Date(year, month, day, 16, 30, 0, 0).getTime();
-        }
-
         function startCountdown() {
             var timerElem = document.getElementById('cd-timer-text');
-            if(!timerElem) return;
+            var target = new Date("Sep 4, 2026 16:30:00").getTime();
 
-            if(countdownInterval) clearInterval(countdownInterval);
-
-            function updateCountdown() {
-                var now = Date.now();
-                var nextMatch = null;
-                var nextTarget = Infinity;
-
-                for(var i = 0; i < leagueData.matches.length; i++) {
-                    var match = leagueData.matches[i];
-                    if(match.status !== 'upcoming') continue;
-
-                    var target = getMatchDateTime(match);
-                    if(!isNaN(target) && target > now && target < nextTarget) {
-                        nextTarget = target;
-                        nextMatch = match;
-                    }
-                }
-
-                if(!nextMatch) {
-                    timerElem.textContent = '🏁 لا توجد مباراة قادمة حالياً';
-                    return;
-                }
-
-                var diff = nextTarget - now;
-                var totalSeconds = Math.floor(diff / 1000);
-                var days = Math.floor(totalSeconds / 86400);
-                var hrs = Math.floor((totalSeconds % 86400) / 3600);
-                var mins = Math.floor((totalSeconds % 3600) / 60);
-                var secs = totalSeconds % 60;
-
-                if(days > 0) {
-                    timerElem.textContent = days + ' يوم : ' + hrs + ' ساعة : ' + mins + ' دقيقة : ' + secs + ' ثانية';
-                } else {
+            setInterval(function() {
+                var now = new Date().getTime();
+                var diff = target - now;
+                if(diff > 0) {
+                    var hrs = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    var secs = Math.floor((diff % (1000 * 60)) / 1000);
                     timerElem.textContent = hrs + ' ساعة : ' + mins + ' دقيقة : ' + secs + ' ثانية';
+                } else {
+                    timerElem.textContent = '⚽ المباراة قيد الانطلاق!';
                 }
-            }
-
-            updateCountdown();
-            countdownInterval = setInterval(updateCountdown, 1000);
+            }, 1000);
         }
 
         function renderMatches() {
@@ -592,14 +520,9 @@
             userVoted[mId] = true;
             localStorage.setItem('MIDI_VOTES', JSON.stringify(userVoted));
 
-            try {
-                await saveData();
-                renderMatches();
-                alert('شكراً لتصويتك!');
-            } catch(e) {
-                renderMatches();
-                alert('⚠️ تم تسجيل التصويت على هذا الجهاز، لكن تعذر حفظه في السحابة.');
-            }
+            await saveData();
+            renderMatches();
+            alert('شكراً لتصويتك!');
         }
 
         function renderStandings() {
@@ -889,14 +812,9 @@
                 m.scorers = tempScorers;
                 m.cards = tempCards;
 
-                try {
-                    await saveData();
-                    refreshUI();
-                    alert('✓ تم حفظ وتحديث نتائج المباراة على السحابة!');
-                } catch(saveError) {
-                    refreshUI();
-                    alert('⚠️ تم حفظ النتيجة على الجهاز، لكن تعذر حفظها في السحابة. افتح Console لمعرفة خطأ Supabase.');
-                }
+                await saveData();
+                refreshUI();
+                alert('✓ تم حفظ وتحديث نتائج المباراة على السحابة!');
             }
 
             btn.textContent = "حفظ وتحديث السحابة فوراً"; btn.disabled = false;
