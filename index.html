@@ -175,7 +175,8 @@
                 <div id="admin-auth-box">
                     <div class="form-group">
                         <label>أدخل رمز الأمان للوصول للوحة التحكم:</label>
-                        <input type="password" id="admin-pin" placeholder="رمز الأمان (aymanmidi)">
+                        <!-- تم إزالة رمز الأدمن من النص التوضيحي للحفاظ على الخصوصية -->
+                        <input type="password" id="admin-pin" placeholder="أدخل كلمة المرور">
                     </div>
                     <button class="btn-submit" style="margin-top: 8px;" onclick="authenticateAdmin()">تسجيل الدخول</button>
                 </div>
@@ -201,8 +202,8 @@
                         <div class="form-group">
                             <label>حالة المباراة:</label>
                             <select id="adm-status">
-                                <option value="upcoming">لم تبدأ بعد</option>
                                 <option value="finished">انتهت المباراة</option>
+                                <option value="upcoming">لم تبدأ بعد</option>
                             </select>
                         </div>
 
@@ -591,7 +592,7 @@
             document.getElementById('lbl-team2').textContent = 'أهداف ' + m.team2 + ':';
             document.getElementById('adm-score1').value = m.score1 || 0;
             document.getElementById('adm-score2').value = m.score2 || 0;
-            document.getElementById('adm-status').value = m.status || 'upcoming';
+            document.getElementById('adm-status').value = m.status || 'finished';
 
             tempScorers = m.scorers ? JSON.parse(JSON.stringify(m.scorers)) : [];
 
@@ -633,6 +634,10 @@
                 }
             }
             if(!found) tempScorers.push({ name: name, goals: num });
+            
+            // تحويل حالة المباراة تلقائياً إلى انتهت لضمان احتساب الأهداف
+            document.getElementById('adm-status').value = 'finished';
+            
             renderAdminScorersList();
         }
 
@@ -660,6 +665,7 @@
             if(m) {
                 m.score1 = parseInt(document.getElementById('adm-score1').value)||0;
                 m.score2 = parseInt(document.getElementById('adm-score2').value)||0;
+                // ضبط الحالة تلقائياً إلى "انتهت" إن كان هناك أهداف أو نتائج مسجلة
                 m.status = document.getElementById('adm-status').value;
                 m.scorers = tempScorers;
 
