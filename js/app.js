@@ -1,426 +1,393 @@
-/* =========================================================
+/* =========================================
    دوري ميدي للمحترفين 2026
-   JavaScript - app.js
-   ========================================================= */
+   الملف: js/app.js
+   ========================================= */
 
-"use strict";
+let leagueData = INITIAL_DATA;
+let currentTab = "matches";
 
 /* =========================
-   بيانات التطبيق الأساسية
-========================= */
+   تشغيل الموقع
+   ========================= */
 
-const App = {
-    name: "دوري ميدي للمحترفين 2026",
+document.addEventListener("DOMContentLoaded", () => {
+    setupNavigation();
+    setupTheme();
+    loadLeagueData();
+});
 
-    data: {
-        season: {
-            name: "دوري ميدي للمحترفين 2026",
-            status: "active"
-        },
 
-        teams: [],
+/* =========================
+   التنقل
+   ========================= */
 
-        players: [],
+function setupNavigation() {
+    const buttons = document.querySelectorAll("[data-tab]");
 
-        matches: [],
+    buttons.forEach(button => {
+        button.addEventListener("click", () => {
+            const tab = button.dataset.tab;
 
-        news: [],
+            if (!tab) return;
 
-        settings: {
-            theme: "light"
+            showTab(tab);
+        });
+    });
+}
+
+
+function showTab(tab) {
+    currentTab = tab;
+
+    const sections = {
+        matches: "sec-matches",
+        standings: "sec-standings",
+        news: "sec-news",
+        teams: "sec-teams",
+        scorers: "sec-scorers"
+    };
+
+    Object.values(sections).forEach(id => {
+        const section = document.getElementById(id);
+
+        if (section) {
+            section.classList.add("hidden");
         }
+    });
+
+    const selectedSection = document.getElementById(sections[tab]);
+
+    if (selectedSection) {
+        selectedSection.classList.remove("hidden");
     }
-};
 
-
-/* =========================
-   أدوات مساعدة
-========================= */
-
-function $(selector) {
-    return document.querySelector(selector);
-}
-
-function $all(selector) {
-    return document.querySelectorAll(selector);
-}
-
-function createId(prefix = "id") {
-    return (
-        prefix +
-        "_" +
-        Date.now().toString(36) +
-        "_" +
-        Math.random().toString(36).substring(2, 8)
-    );
-}
-
-
-/* =========================
-   التخزين المحلي
-   مؤقت للتجربة فقط
-========================= */
-
-function saveLocalData() {
-    try {
-        localStorage.setItem(
-            "midi_league_data",
-            JSON.stringify(App.data)
+    document.querySelectorAll("[data-tab]").forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.tab === tab
         );
-
-        console.log("تم حفظ البيانات محليًا");
-    } catch (error) {
-        console.error("خطأ في الحفظ المحلي:", error);
-    }
+    });
 }
 
 
-function loadLocalData() {
-    try {
-        const saved = localStorage.getItem("midi_league_data");
+/* =========================
+   تحميل البيانات
+   ========================= */
 
-        if (!saved) {
+async function loadLeagueData() {
+    try {
+        const { data, error } = await supabaseClient
+            .from("new_league_data")
+            .select("data")
+            .eq("id", 1)
+            .maybeSingle();
+
+        if (error) {
+            console.error("خطأ في تحميل بيانات الدوري:", error);
+
+            leagueData = INITIAL_DATA;
+
+            renderAll();
+
             return;
         }
 
-        const parsed = JSON.parse(saved);
-
-        if (parsed && typeof parsed === "object") {
-            App.data = {
-                ...App.data,
-                ...parsed
-            };
+        if (data && data.data) {
+            leagueData = data.data;
+        } else {
+            leagueData = INITIAL_DATA;
         }
 
-        console.log("تم تحميل البيانات المحلية");
+        renderAll();
+
     } catch (error) {
-        console.error("خطأ في تحميل البيانات:", error);
+        console.error("حدث خطأ غير متوقع:", error);
+
+        leagueData = INITIAL_DATA;
+
+        renderAll();
     }
 }
 
 
 /* =========================
-   الفرق
-========================= */
+   عرض كل المحتوى
+   ========================= */
 
-function addTeam(name, logo = "") {
-    if (!name || !name.trim()) {
-        return false;
-    }
-
-    const team = {
-        id: createId("team"),
-        name: name.trim(),
-        logo: logo.trim()
-    };
-
-    App.data.teams.push(team);
-
-    saveLocalData();
-    renderAll();
-
-    return team;
-}
-
-
-function removeTeam(teamId) {
-    App.data.teams = App.data.teams.filter(
-        team => team.id !== teamId
-    );
-
-    saveLocalData();
-    renderAll();
-}
-
-
-function getTeam(teamId) {
-    return App.data.teams.find(
-        team => team.id === teamId
-    );
-}
-
-
-/* =========================
-   اللاعبين
-========================= */
-
-function addPlayer(teamId, name, image = "", position = "") {
-    if (!teamId || !name || !name.trim()) {
-        return false;
-    }
-
-    const player = {
-        id: createId("player"),
-        teamId: teamId,
-        name: name.trim(),
-        image: image.trim(),
-        position: position.trim()
-    };
-
-    App.data.players.push(player);
-
-    saveLocalData();
-    renderAll();
-
-    return player;
-}
-
-
-function removePlayer(playerId) {
-    App.data.players = App.data.players.filter(
-        player => player.id !== playerId
-    );
-
-    saveLocalData();
-    renderAll();
-}
-
-
-function getPlayersByTeam(teamId) {
-    return App.data.players.filter(
-        player => player.teamId === teamId
-    );
+function renderAll() {
+    renderMatches();
+    renderStandings();
+    renderTeams();
+    renderNews();
+    renderScorers();
+    renderCards();
+    renderNextMatch();
 }
 
 
 /* =========================
    المباريات
-========================= */
+   ========================= */
 
-function addMatch(matchData) {
-    if (
-        !matchData ||
-        !matchData.homeTeam ||
-        !matchData.awayTeam
-    ) {
-        return false;
+function renderMatches() {
+    const container = document.getElementById("matches");
+
+    if (!container) return;
+
+    const matches = Array.isArray(leagueData.matches)
+        ? leagueData.matches
+        : [];
+
+    if (matches.length === 0) {
+        container.innerHTML = `
+            <div class="card">
+                لا توجد مباريات حاليًا.
+            </div>
+        `;
+
+        return;
     }
 
-    const match = {
-        id: createId("match"),
+    const sortedMatches = [...matches].sort(
+        (a, b) =>
+            new Date(a.date || 0) -
+            new Date(b.date || 0)
+    );
 
-        homeTeam: matchData.homeTeam,
+    container.innerHTML = sortedMatches
+        .map(match => {
 
-        awayTeam: matchData.awayTeam,
+            const team1 = getTeam(match.team1);
+            const team2 = getTeam(match.team2);
 
-        date: matchData.date || "",
+            const team1Name =
+                team1?.name || match.team1 || "الفريق الأول";
 
-        time: matchData.time || "04:30",
+            const team2Name =
+                team2?.name || match.team2 || "الفريق الثاني";
 
-        stage: matchData.stage || "الجولة 1",
+            const team1Logo =
+                team1?.logo || "";
 
-        status: matchData.status || "upcoming",
+            const team2Logo =
+                team2?.logo || "";
 
-        homeScore:
-            matchData.homeScore !== undefined
-                ? Number(matchData.homeScore)
-                : null,
+            const finished =
+                match.status === "finished" ||
+                (
+                    match.score1 !== undefined &&
+                    match.score2 !== undefined
+                );
 
-        awayScore:
-            matchData.awayScore !== undefined
-                ? Number(matchData.awayScore)
-                : null,
+            const score = finished
+                ? `${match.score1 ?? 0} - ${match.score2 ?? 0}`
+                : "VS";
 
-        goals: [],
+            return `
+                <article class="match-card">
 
-        cards: [],
+                    <div class="match-top">
 
-        details: matchData.details || ""
-    };
+                        <div class="match-date">
+                            ${formatDate(match.date)}
+                        </div>
 
-    App.data.matches.push(match);
+                        <div class="round">
+                            ${escapeHtml(match.stage || "مباراة")}
+                        </div>
 
-    saveLocalData();
-    renderAll();
+                    </div>
 
-    return match;
+
+                    <div class="teams">
+
+                        <div class="team">
+
+                            ${
+                                team1Logo
+                                ? `
+                                    <img
+                                        class="team-logo"
+                                        src="${escapeAttribute(team1Logo)}"
+                                        alt="${escapeAttribute(team1Name)}"
+                                    >
+                                `
+                                : ""
+                            }
+
+                            <div class="team-name">
+                                ${escapeHtml(team1Name)}
+                            </div>
+
+                        </div>
+
+
+                        <div>
+                            <div class="${finished ? "score" : "vs"}">
+                                ${score}
+                            </div>
+                        </div>
+
+
+                        <div class="team">
+
+                            ${
+                                team2Logo
+                                ? `
+                                    <img
+                                        class="team-logo"
+                                        src="${escapeAttribute(team2Logo)}"
+                                        alt="${escapeAttribute(team2Name)}"
+                                    >
+                                `
+                                : ""
+                            }
+
+                            <div class="team-name">
+                                ${escapeHtml(team2Name)}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    ${renderMatchEvents(match)}
+
+                </article>
+            `;
+        })
+        .join("");
 }
 
 
-function updateMatch(matchId, changes) {
-    const match = App.data.matches.find(
-        item => item.id === matchId
-    );
+function renderMatchEvents(match) {
+    const events = [];
 
-    if (!match) {
-        return false;
+    if (Array.isArray(match.scorers)) {
+        match.scorers.forEach(item => {
+            if (!item) return;
+
+            const player =
+                typeof item === "string"
+                    ? item
+                    : item.player || item.name || "";
+
+            if (player) {
+                events.push(`⚽ ${escapeHtml(player)}`);
+            }
+        });
     }
 
-    Object.assign(match, changes);
+    if (Array.isArray(match.cards)) {
+        match.cards.forEach(item => {
+            if (!item) return;
 
-    saveLocalData();
-    renderAll();
+            const player =
+                typeof item === "string"
+                    ? item
+                    : item.player || item.name || "";
 
-    return true;
-}
+            const type =
+                typeof item === "object"
+                    ? item.type || ""
+                    : "";
 
+            if (player) {
+                events.push(
+                    `${type === "red" ? "🟥" : "🟨"} ${escapeHtml(player)}`
+                );
+            }
+        });
+    }
 
-function removeMatch(matchId) {
-    App.data.matches = App.data.matches.filter(
-        match => match.id !== matchId
-    );
+    if (match.details) {
+        events.push(
+            `📝 ${escapeHtml(match.details)}`
+        );
+    }
 
-    saveLocalData();
-    renderAll();
+    if (events.length === 0) {
+        return "";
+    }
+
+    return `
+        <div class="match-events">
+            ${events
+                .map(event => `<div class="event">${event}</div>`)
+                .join("")}
+        </div>
+    `;
 }
 
 
 /* =========================
-   أهداف المباراة
-========================= */
+   جدول الترتيب
+   ========================= */
 
-function addGoal(matchId, playerId, teamId, minute = "") {
-    const match = App.data.matches.find(
-        item => item.id === matchId
-    );
+function renderStandings() {
+    const container = document.getElementById("standings");
 
-    if (!match) {
-        return false;
-    }
+    if (!container) return;
 
-    match.goals.push({
-        id: createId("goal"),
-        playerId,
-        teamId,
-        minute: minute || ""
-    });
+    const teams = Array.isArray(leagueData.teams)
+        ? leagueData.teams
+        : [];
 
-    saveLocalData();
-    renderAll();
+    const matches = Array.isArray(leagueData.matches)
+        ? leagueData.matches
+        : [];
 
-    return true;
-}
+    const table = teams.map(team => ({
+        team,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        gf: 0,
+        ga: 0,
+        points: 0
+    }));
 
+    matches.forEach(match => {
 
-/* =========================
-   البطاقات
-========================= */
-
-function addCard(
-    matchId,
-    playerId,
-    teamId,
-    type,
-    minute = ""
-) {
-    const match = App.data.matches.find(
-        item => item.id === matchId
-    );
-
-    if (!match) {
-        return false;
-    }
-
-    match.cards.push({
-        id: createId("card"),
-        playerId,
-        teamId,
-        type,
-        minute: minute || ""
-    });
-
-    saveLocalData();
-    renderAll();
-
-    return true;
-}
-
-
-/* =========================
-   الأخبار
-========================= */
-
-function addNews(title, content, mediaUrl = "") {
-    if (!title || !title.trim()) {
-        return false;
-    }
-
-    const news = {
-        id: createId("news"),
-        title: title.trim(),
-        content: content || "",
-        mediaUrl: mediaUrl || "",
-        createdAt: new Date().toISOString()
-    };
-
-    App.data.news.unshift(news);
-
-    saveLocalData();
-    renderAll();
-
-    return news;
-}
-
-
-function removeNews(newsId) {
-    App.data.news = App.data.news.filter(
-        news => news.id !== newsId
-    );
-
-    saveLocalData();
-    renderAll();
-}
-
-
-/* =========================
-   ترتيب الدوري
-========================= */
-
-function calculateStandings() {
-    const table = {};
-
-    App.data.teams.forEach(team => {
-        table[team.id] = {
-            teamId: team.id,
-            played: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            goalDifference: 0,
-            points: 0
-        };
-    });
-
-    App.data.matches.forEach(match => {
         if (
-            match.status !== "finished" ||
-            match.homeScore === null ||
-            match.awayScore === null
+            match.score1 === undefined ||
+            match.score2 === undefined
         ) {
             return;
         }
 
-        const home = table[match.homeTeam];
-        const away = table[match.awayTeam];
+        const home = table.find(
+            item => item.team.name === match.team1
+        );
 
-        if (!home || !away) {
-            return;
-        }
+        const away = table.find(
+            item => item.team.name === match.team2
+        );
 
-        const homeScore = Number(match.homeScore);
-        const awayScore = Number(match.awayScore);
+        if (!home || !away) return;
+
+        const s1 = Number(match.score1);
+        const s2 = Number(match.score2);
 
         home.played++;
         away.played++;
 
-        home.goalsFor += homeScore;
-        home.goalsAgainst += awayScore;
+        home.gf += s1;
+        home.ga += s2;
 
-        away.goalsFor += awayScore;
-        away.goalsAgainst += homeScore;
+        away.gf += s2;
+        away.ga += s1;
 
-        if (homeScore > awayScore) {
+        if (s1 > s2) {
             home.wins++;
-            away.losses++;
-
             home.points += 3;
-        } else if (homeScore < awayScore) {
+            away.losses++;
+        } else if (s2 > s1) {
             away.wins++;
-            home.losses++;
-
             away.points += 3;
+            home.losses++;
         } else {
             home.draws++;
             away.draws++;
@@ -430,138 +397,484 @@ function calculateStandings() {
         }
     });
 
-    Object.values(table).forEach(team => {
-        team.goalDifference =
-            team.goalsFor - team.goalsAgainst;
+    table.sort((a, b) => {
+
+        const gdA = a.gf - a.ga;
+        const gdB = b.gf - b.ga;
+
+        return (
+            b.points - a.points ||
+            gdB - gdA ||
+            b.gf - a.gf
+        );
     });
 
-    return Object.values(table).sort((a, b) => {
-        if (b.points !== a.points) {
-            return b.points - a.points;
-        }
+    container.innerHTML = table
+        .map((item, index) => {
 
-        if (b.goalDifference !== a.goalDifference) {
-            return b.goalDifference - a.goalDifference;
-        }
+            const gd = item.gf - item.ga;
 
-        return b.goalsFor - a.goalsFor;
-    });
+            return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(item.team.name)}</td>
+                    <td>${item.played}</td>
+                    <td>${item.wins}</td>
+                    <td>${item.draws}</td>
+                    <td>${item.losses}</td>
+                    <td>${item.gf}</td>
+                    <td>${item.ga}</td>
+                    <td>${gd > 0 ? "+" : ""}${gd}</td>
+                    <td><strong>${item.points}</strong></td>
+                </tr>
+            `;
+        })
+        .join("");
+}
+
+
+/* =========================
+   الفرق واللاعبون
+   ========================= */
+
+function renderTeams() {
+    const container = document.getElementById("teams");
+
+    if (!container) return;
+
+    const teams = Array.isArray(leagueData.teams)
+        ? leagueData.teams
+        : [];
+
+    if (teams.length === 0) {
+        container.innerHTML = `
+            <div class="card">
+                لا توجد فرق حاليًا.
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = teams
+        .map(team => {
+
+            const players = Array.isArray(team.players)
+                ? team.players
+                : [];
+
+            return `
+                <div class="team-card">
+
+                    <div class="team-card-head">
+
+                        ${
+                            team.logo
+                            ? `
+                                <img
+                                    src="${escapeAttribute(team.logo)}"
+                                    alt="${escapeAttribute(team.name)}"
+                                >
+                            `
+                            : ""
+                        }
+
+                        <div>
+                            <strong>
+                                ${escapeHtml(team.name)}
+                            </strong>
+
+                            <div>
+                                ${players.length} لاعب
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="players">
+
+                        ${
+                            players.length
+                            ? players.map(player => {
+
+                                const playerName =
+                                    typeof player === "string"
+                                        ? player
+                                        : player.name || "";
+
+                                const image =
+                                    typeof player === "object"
+                                        ? player.image || ""
+                                        : "";
+
+                                return `
+                                    <div class="player">
+
+                                        ${
+                                            image
+                                            ? `
+                                                <img
+                                                    src="${escapeAttribute(image)}"
+                                                    alt="${escapeAttribute(playerName)}"
+                                                >
+                                            `
+                                            : ""
+                                        }
+
+                                        <div class="player-name">
+                                            ${escapeHtml(playerName)}
+                                        </div>
+
+                                    </div>
+                                `;
+
+                            }).join("")
+                            : "<div>لا يوجد لاعبين.</div>"
+                        }
+
+                    </div>
+
+                </div>
+            `;
+        })
+        .join("");
+}
+
+
+/* =========================
+   الأخبار
+   ========================= */
+
+function renderNews() {
+    const container = document.getElementById("news");
+
+    if (!container) return;
+
+    const news = Array.isArray(leagueData.news)
+        ? leagueData.news
+        : [];
+
+    if (news.length === 0) {
+        container.innerHTML = `
+            <div class="card">
+                لا توجد أخبار حاليًا.
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = news
+        .map(item => {
+
+            let media = "";
+
+            if (item.image) {
+                media += `
+                    <img
+                        src="${escapeAttribute(item.image)}"
+                        alt=""
+                    >
+                `;
+            }
+
+            if (item.video) {
+                media += `
+                    <video
+                        src="${escapeAttribute(item.video)}"
+                        controls
+                    ></video>
+                `;
+            }
+
+            if (item.youtube) {
+                media += `
+                    <iframe
+                        src="${escapeAttribute(item.youtube)}"
+                        allowfullscreen
+                    ></iframe>
+                `;
+            }
+
+            return `
+                <article class="news-card">
+
+                    ${media}
+
+                    <div class="news-content">
+
+                        <h3 class="news-title">
+                            ${escapeHtml(item.title || "خبر")}
+                        </h3>
+
+                        <div class="news-text">
+                            ${escapeHtml(item.text || "")}
+                        </div>
+
+                    </div>
+
+                </article>
+            `;
+        })
+        .join("");
 }
 
 
 /* =========================
    الهدافون
-========================= */
+   ========================= */
 
-function calculateScorers() {
-    const scorers = {};
+function renderScorers() {
+    const container = document.getElementById("scorers");
 
-    App.data.matches.forEach(match => {
-        if (match.status !== "finished") {
-            return;
-        }
+    if (!container) return;
 
-        if (!Array.isArray(match.goals)) {
-            return;
-        }
+    const matches = Array.isArray(leagueData.matches)
+        ? leagueData.matches
+        : [];
 
-        match.goals.forEach(goal => {
-            if (!goal.playerId) {
-                return;
-            }
+    const stats = {};
 
-            if (!scorers[goal.playerId]) {
-                scorers[goal.playerId] = {
-                    playerId: goal.playerId,
-                    goals: 0
-                };
-            }
+    matches.forEach(match => {
 
-            scorers[goal.playerId].goals++;
+        if (!Array.isArray(match.scorers)) return;
+
+        match.scorers.forEach(item => {
+
+            const name =
+                typeof item === "string"
+                    ? item
+                    : item.player || item.name;
+
+            if (!name) return;
+
+            stats[name] = (stats[name] || 0) + 1;
         });
     });
 
-    return Object.values(scorers).sort(
-        (a, b) => b.goals - a.goals
+    const list = Object.entries(stats)
+        .sort((a, b) => b[1] - a[1]);
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <li>
+                لا توجد أهداف مسجلة حاليًا.
+            </li>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = list
+        .map(([name, goals]) => `
+            <li>
+                <span>${escapeHtml(name)}</span>
+                <strong>${goals}</strong>
+            </li>
+        `)
+        .join("");
+}
+
+
+/* =========================
+   البطاقات
+   ========================= */
+
+function renderCards() {
+    const container = document.getElementById("cards");
+
+    if (!container) return;
+
+    const matches = Array.isArray(leagueData.matches)
+        ? leagueData.matches
+        : [];
+
+    const stats = {};
+
+    matches.forEach(match => {
+
+        if (!Array.isArray(match.cards)) return;
+
+        match.cards.forEach(item => {
+
+            const name =
+                typeof item === "string"
+                    ? item
+                    : item.player || item.name;
+
+            if (!name) return;
+
+            const type =
+                typeof item === "object"
+                    ? item.type || "yellow"
+                    : "yellow";
+
+            if (!stats[name]) {
+                stats[name] = {
+                    yellow: 0,
+                    red: 0
+                };
+            }
+
+            if (type === "red") {
+                stats[name].red++;
+            } else {
+                stats[name].yellow++;
+            }
+        });
+    });
+
+    const list = Object.entries(stats);
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <li>
+                لا توجد بطاقات مسجلة حاليًا.
+            </li>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = list
+        .map(([name, cards]) => `
+            <li>
+                <span>${escapeHtml(name)}</span>
+                <span>
+                    🟨 ${cards.yellow}
+                    &nbsp;
+                    🟥 ${cards.red}
+                </span>
+            </li>
+        `)
+        .join("");
+}
+
+
+/* =========================
+   المباراة القادمة
+   ========================= */
+
+function renderNextMatch() {
+    const container = document.getElementById("nextMatch");
+
+    if (!container) return;
+
+    const matches = Array.isArray(leagueData.matches)
+        ? leagueData.matches
+        : [];
+
+    const upcoming = matches
+        .filter(match => match.status !== "finished")
+        .filter(match => match.date)
+        .sort(
+            (a, b) =>
+                new Date(a.date) -
+                new Date(b.date)
+        )[0];
+
+    if (!upcoming) {
+        container.textContent =
+            "لا توجد مباراة قادمة حاليًا.";
+
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="text-align:center">
+
+            <strong>
+                ${escapeHtml(upcoming.team1 || "")}
+            </strong>
+
+            <span> × </span>
+
+            <strong>
+                ${escapeHtml(upcoming.team2 || "")}
+            </strong>
+
+            <br>
+
+            <span>
+                ${formatDate(upcoming.date)}
+            </span>
+
+        </div>
+    `;
+}
+
+
+/* =========================
+   البحث عن فريق
+   ========================= */
+
+function getTeam(name) {
+    if (!Array.isArray(leagueData.teams)) {
+        return null;
+    }
+
+    return leagueData.teams.find(
+        team => team.name === name
+    ) || null;
+}
+
+
+/* =========================
+   التاريخ
+   ========================= */
+
+function formatDate(value) {
+    if (!value) return "بدون تاريخ";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return escapeHtml(String(value));
+    }
+
+    return date.toLocaleString(
+        "ar-YE",
+        {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit"
+        }
     );
 }
 
 
 /* =========================
-   عرض البيانات
-========================= */
+   الوضع الليلي
+   ========================= */
 
-function renderTeams() {
-    console.log(
-        "عدد الفرق:",
-        App.data.teams.length
-    );
-}
+function setupTheme() {
+    const button = document.getElementById("themeButton");
 
+    if (!button) return;
 
-function renderPlayers() {
-    console.log(
-        "عدد اللاعبين:",
-        App.data.players.length
-    );
-}
-
-
-function renderMatches() {
-    console.log(
-        "عدد المباريات:",
-        App.data.matches.length
-    );
-}
-
-
-function renderStandings() {
-    const standings = calculateStandings();
-
-    console.log(
-        "الترتيب:",
-        standings
-    );
-}
-
-
-function renderNews() {
-    console.log(
-        "عدد الأخبار:",
-        App.data.news.length
-    );
-}
-
-
-function renderAll() {
-    renderTeams();
-    renderPlayers();
-    renderMatches();
-    renderStandings();
-    renderNews();
+    button.addEventListener("click", () => {
+        document.body.classList.toggle("dark-mode");
+    });
 }
 
 
 /* =========================
-   تشغيل التطبيق
-========================= */
+   حماية النصوص
+   ========================= */
 
-function initApp() {
-    console.log(
-        "تم تشغيل دوري ميدي للمحترفين 2026"
-    );
-
-    loadLocalData();
-
-    renderAll();
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
-/* =========================
-   بدء التطبيق
-========================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    initApp
-);
+function escapeAttribute(value) {
+    return escapeHtml(value);
+}
