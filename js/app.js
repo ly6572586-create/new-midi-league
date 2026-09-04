@@ -6,6 +6,7 @@
 let leagueData = INITIAL_DATA;
 let currentTab = "matches";
 
+
 /* =========================
    تشغيل الموقع
    ========================= */
@@ -55,7 +56,8 @@ function showTab(tab) {
         }
     });
 
-    const selectedSection = document.getElementById(sections[tab]);
+    const selectedSection =
+        document.getElementById(sections[tab]);
 
     if (selectedSection) {
         selectedSection.classList.remove("hidden");
@@ -71,41 +73,135 @@ function showTab(tab) {
 
 
 /* =========================
-   تحميل البيانات
+   تحميل البيانات من Supabase
    ========================= */
 
 async function loadLeagueData() {
+
     try {
+
         const { data, error } = await supabaseClient
             .from("new_league_data")
             .select("data")
             .eq("id", 1)
             .maybeSingle();
 
+
         if (error) {
-            console.error("خطأ في تحميل بيانات الدوري:", error);
 
-            leagueData = INITIAL_DATA;
+            console.error(
+                "خطأ في تحميل بيانات الدوري:",
+                error
+            );
 
-            renderAll();
+            showDatabaseError(error);
 
             return;
         }
 
-        if (data && data.data) {
-            leagueData = data.data;
-        } else {
-            leagueData = INITIAL_DATA;
+
+        if (!data || !data.data) {
+
+            console.error(
+                "لم يتم العثور على بيانات الدوري."
+            );
+
+            showDatabaseError(
+                "لم يتم العثور على بيانات الدوري."
+            );
+
+            return;
         }
 
+
+        /*
+         * مهم:
+         *
+         * العمود data في Supabase يحتوي
+         * على JSON.
+         *
+         * normalizeLeagueData تقوم بتحويله
+         * وتجهيز الفرق واللاعبين والمباريات
+         * والأخبار بالشكل الذي يحتاجه الموقع.
+         */
+
+        leagueData = normalizeLeagueData(data.data);
+
+
+        console.log(
+            "تم تحميل بيانات الدوري:",
+            leagueData
+        );
+
+
         renderAll();
+
 
     } catch (error) {
-        console.error("حدث خطأ غير متوقع:", error);
 
-        leagueData = INITIAL_DATA;
+        console.error(
+            "حدث خطأ غير متوقع:",
+            error
+        );
 
-        renderAll();
+        showDatabaseError(error);
+    }
+}
+
+
+/* =========================
+   رسالة خطأ قاعدة البيانات
+   ========================= */
+
+function showDatabaseError(error) {
+
+    const message =
+        error?.message ||
+        String(error) ||
+        "خطأ غير معروف";
+
+
+    const containers = [
+        "matches",
+        "standings",
+        "news",
+        "teams",
+        "scorers"
+    ];
+
+
+    containers.forEach(id => {
+
+        const container =
+            document.getElementById(id);
+
+        if (!container) return;
+
+
+        container.innerHTML = `
+            <div class="card">
+                <div class="alert alert-danger">
+                    تعذر تحميل بيانات الدوري من قاعدة البيانات.
+                </div>
+
+                <div>
+                    ${escapeHtml(message)}
+                </div>
+            </div>
+        `;
+    });
+
+
+    const nextMatch =
+        document.getElementById("nextMatch");
+
+    if (nextMatch) {
+
+        nextMatch.innerHTML = `
+            <div class="alert alert-danger">
+                تعذر تحميل بيانات المباراة القادمة.
+            </div>
+        `;
     }
 }
 
@@ -115,12 +211,19 @@ async function loadLeagueData() {
    ========================= */
 
 function renderAll() {
+
     renderMatches();
+
     renderStandings();
+
     renderTeams();
+
     renderNews();
+
     renderScorers();
+
     renderCards();
+
     renderNextMatch();
 }
 
@@ -130,15 +233,21 @@ function renderAll() {
    ========================= */
 
 function renderMatches() {
-    const container = document.getElementById("matches");
+
+    const container =
+        document.getElementById("matches");
 
     if (!container) return;
 
-    const matches = Array.isArray(leagueData.matches)
-        ? leagueData.matches
-        : [];
+
+    const matches =
+        Array.isArray(leagueData.matches)
+            ? leagueData.matches
+            : [];
+
 
     if (matches.length === 0) {
+
         container.innerHTML = `
             <div class="card">
                 لا توجد مباريات حاليًا.
@@ -148,174 +257,270 @@ function renderMatches() {
         return;
     }
 
-    const sortedMatches = [...matches].sort(
-        (a, b) =>
-            new Date(a.date || 0) -
-            new Date(b.date || 0)
-    );
 
-    container.innerHTML = sortedMatches
-        .map(match => {
+    const sortedMatches =
+        [...matches].sort((a, b) => {
 
-            const team1 = getTeam(match.team1);
-            const team2 = getTeam(match.team2);
-
-            const team1Name =
-                team1?.name || match.team1 || "الفريق الأول";
-
-            const team2Name =
-                team2?.name || match.team2 || "الفريق الثاني";
-
-            const team1Logo =
-                team1?.logo || "";
-
-            const team2Logo =
-                team2?.logo || "";
-
-            const finished =
-                match.status === "finished" ||
-                (
-                    match.score1 !== undefined &&
-                    match.score2 !== undefined
-                );
-
-            const score = finished
-                ? `${match.score1 ?? 0} - ${match.score2 ?? 0}`
-                : "VS";
-
-            return `
-                <article class="match-card">
-
-                    <div class="match-top">
-
-                        <div class="match-date">
-                            ${formatDate(match.date)}
-                        </div>
-
-                        <div class="round">
-                            ${escapeHtml(match.stage || "مباراة")}
-                        </div>
-
-                    </div>
+            return (
+                getMatchDate(a.date) -
+                getMatchDate(b.date)
+            );
+        });
 
 
-                    <div class="teams">
+    container.innerHTML =
+        sortedMatches
+            .map(match => {
 
-                        <div class="team">
+                const team1 =
+                    getTeam(match.team1);
 
-                            ${
-                                team1Logo
-                                ? `
-                                    <img
-                                        class="team-logo"
-                                        src="${escapeAttribute(team1Logo)}"
-                                        alt="${escapeAttribute(team1Name)}"
-                                    >
-                                `
-                                : ""
-                            }
+                const team2 =
+                    getTeam(match.team2);
 
-                            <div class="team-name">
-                                ${escapeHtml(team1Name)}
+
+                const team1Name =
+                    team1?.name ||
+                    match.team1 ||
+                    "الفريق الأول";
+
+
+                const team2Name =
+                    team2?.name ||
+                    match.team2 ||
+                    "الفريق الثاني";
+
+
+                const team1Logo =
+                    team1?.logo || "";
+
+
+                const team2Logo =
+                    team2?.logo || "";
+
+
+                const finished =
+                    match.status === "finished";
+
+
+                const score =
+                    finished
+                        ? `${Number(match.score1 ?? 0)} - ${Number(match.score2 ?? 0)}`
+                        : "VS";
+
+
+                return `
+                    <article class="match-card">
+
+                        <div class="match-top">
+
+                            <div class="match-date">
+                                ${formatMatchDate(match.date)}
+
+                                ${
+                                    match.time
+                                        ? `<br>${escapeHtml(match.time)}`
+                                        : ""
+                                }
+                            </div>
+
+                            <div class="round">
+                                ${escapeHtml(
+                                    match.stage ||
+                                    "مباراة"
+                                )}
                             </div>
 
                         </div>
 
 
-                        <div>
-                            <div class="${finished ? "score" : "vs"}">
-                                ${score}
+                        <div class="teams">
+
+                            <div class="team">
+
+                                ${
+                                    team1Logo
+                                        ? `
+                                            <img
+                                                class="team-logo"
+                                                src="${escapeAttribute(team1Logo)}"
+                                                alt="${escapeAttribute(team1Name)}"
+                                            >
+                                        `
+                                        : ""
+                                }
+
+                                <div class="team-name">
+                                    ${escapeHtml(team1Name)}
+                                </div>
+
                             </div>
+
+
+                            <div>
+
+                                <div class="${
+                                    finished
+                                        ? "score"
+                                        : "vs"
+                                }">
+
+                                    ${score}
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="team">
+
+                                ${
+                                    team2Logo
+                                        ? `
+                                            <img
+                                                class="team-logo"
+                                                src="${escapeAttribute(team2Logo)}"
+                                                alt="${escapeAttribute(team2Name)}"
+                                            >
+                                        `
+                                        : ""
+                                }
+
+                                <div class="team-name">
+                                    ${escapeHtml(team2Name)}
+                                </div>
+
+                            </div>
+
                         </div>
 
 
-                        <div class="team">
+                        ${renderMatchEvents(match)}
 
-                            ${
-                                team2Logo
-                                ? `
-                                    <img
-                                        class="team-logo"
-                                        src="${escapeAttribute(team2Logo)}"
-                                        alt="${escapeAttribute(team2Name)}"
-                                    >
-                                `
-                                : ""
-                            }
-
-                            <div class="team-name">
-                                ${escapeHtml(team2Name)}
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    ${renderMatchEvents(match)}
-
-                </article>
-            `;
-        })
-        .join("");
+                    </article>
+                `;
+            })
+            .join("");
 }
 
 
+/* =========================
+   أحداث المباراة
+   ========================= */
+
 function renderMatchEvents(match) {
+
     const events = [];
 
+
+    /*
+     * الأهداف
+     */
+
     if (Array.isArray(match.scorers)) {
+
         match.scorers.forEach(item => {
+
             if (!item) return;
+
 
             const player =
                 typeof item === "string"
                     ? item
-                    : item.player || item.name || "";
+                    : item.name ||
+                      item.player ||
+                      "";
 
-            if (player) {
-                events.push(`⚽ ${escapeHtml(player)}`);
-            }
-        });
-    }
 
-    if (Array.isArray(match.cards)) {
-        match.cards.forEach(item => {
-            if (!item) return;
-
-            const player =
-                typeof item === "string"
-                    ? item
-                    : item.player || item.name || "";
-
-            const type =
+            const goals =
                 typeof item === "object"
-                    ? item.type || ""
-                    : "";
+                    ? Number(item.goals || 1)
+                    : 1;
+
 
             if (player) {
+
                 events.push(
-                    `${type === "red" ? "🟥" : "🟨"} ${escapeHtml(player)}`
+                    `⚽ ${escapeHtml(player)}${
+                        goals > 1
+                            ? ` × ${goals}`
+                            : ""
+                    }`
                 );
             }
         });
     }
 
+
+    /*
+     * البطاقات
+     */
+
+    if (Array.isArray(match.cards)) {
+
+        match.cards.forEach(item => {
+
+            if (!item) return;
+
+
+            const player =
+                typeof item === "string"
+                    ? item
+                    : item.name ||
+                      item.player ||
+                      "";
+
+
+            const type =
+                typeof item === "object"
+                    ? item.type || "yellow"
+                    : "yellow";
+
+
+            if (!player) return;
+
+
+            events.push(
+                `${
+                    type === "red"
+                        ? "🟥"
+                        : "🟨"
+                } ${escapeHtml(player)}`
+            );
+        });
+    }
+
+
+    /*
+     * تفاصيل المباراة
+     */
+
     if (match.details) {
+
         events.push(
             `📝 ${escapeHtml(match.details)}`
         );
     }
 
+
     if (events.length === 0) {
         return "";
     }
 
+
     return `
         <div class="match-events">
+
+            <h3>
+                أحداث المباراة
+            </h3>
+
             ${events
-                .map(event => `<div class="event">${event}</div>`)
+                .map(event =>
+                    `<div class="event">${event}</div>`
+                )
                 .join("")}
+
         </div>
     `;
 }
@@ -326,30 +531,59 @@ function renderMatchEvents(match) {
    ========================= */
 
 function renderStandings() {
-    const container = document.getElementById("standings");
+
+    const container =
+        document.getElementById("standings");
 
     if (!container) return;
 
-    const teams = Array.isArray(leagueData.teams)
-        ? leagueData.teams
-        : [];
 
-    const matches = Array.isArray(leagueData.matches)
-        ? leagueData.matches
-        : [];
+    const teams =
+        Array.isArray(leagueData.teams)
+            ? leagueData.teams
+            : [];
 
-    const table = teams.map(team => ({
-        team,
-        played: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        gf: 0,
-        ga: 0,
-        points: 0
-    }));
+
+    const matches =
+        Array.isArray(leagueData.matches)
+            ? leagueData.matches
+            : [];
+
+
+    const table =
+        teams.map(team => ({
+
+            team,
+
+            played: 0,
+
+            wins: 0,
+
+            draws: 0,
+
+            losses: 0,
+
+            gf: 0,
+
+            ga: 0,
+
+            points: 0
+
+        }));
+
 
     matches.forEach(match => {
+
+        /*
+         * نحسب المباريات المنتهية فقط.
+         */
+
+        if (
+            match.status !== "finished"
+        ) {
+            return;
+        }
+
 
         if (
             match.score1 === undefined ||
@@ -358,49 +592,97 @@ function renderStandings() {
             return;
         }
 
-        const home = table.find(
-            item => item.team.name === match.team1
-        );
 
-        const away = table.find(
-            item => item.team.name === match.team2
-        );
+        const home =
+            table.find(
+                item =>
+                    item.team.name ===
+                    match.team1
+            );
 
-        if (!home || !away) return;
 
-        const s1 = Number(match.score1);
-        const s2 = Number(match.score2);
+        const away =
+            table.find(
+                item =>
+                    item.team.name ===
+                    match.team2
+            );
+
+
+        if (!home || !away) {
+            return;
+        }
+
+
+        const s1 =
+            Number(match.score1);
+
+
+        const s2 =
+            Number(match.score2);
+
+
+        if (
+            Number.isNaN(s1) ||
+            Number.isNaN(s2)
+        ) {
+            return;
+        }
+
 
         home.played++;
+
         away.played++;
 
+
         home.gf += s1;
+
         home.ga += s2;
 
+
         away.gf += s2;
+
         away.ga += s1;
 
+
         if (s1 > s2) {
+
             home.wins++;
+
             home.points += 3;
+
             away.losses++;
+
         } else if (s2 > s1) {
+
             away.wins++;
+
             away.points += 3;
+
             home.losses++;
+
         } else {
+
             home.draws++;
+
             away.draws++;
 
             home.points++;
+
             away.points++;
         }
     });
 
+
     table.sort((a, b) => {
 
-        const gdA = a.gf - a.ga;
-        const gdB = b.gf - b.ga;
+        const gdA =
+            a.gf - a.ga;
+
+
+        const gdB =
+            b.gf - b.ga;
+
 
         return (
             b.points - a.points ||
@@ -409,27 +691,70 @@ function renderStandings() {
         );
     });
 
-    container.innerHTML = table
-        .map((item, index) => {
 
-            const gd = item.gf - item.ga;
+    container.innerHTML =
+        table
+            .map((item, index) => {
 
-            return `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${escapeHtml(item.team.name)}</td>
-                    <td>${item.played}</td>
-                    <td>${item.wins}</td>
-                    <td>${item.draws}</td>
-                    <td>${item.losses}</td>
-                    <td>${item.gf}</td>
-                    <td>${item.ga}</td>
-                    <td>${gd > 0 ? "+" : ""}${gd}</td>
-                    <td><strong>${item.points}</strong></td>
-                </tr>
-            `;
-        })
-        .join("");
+                const gd =
+                    item.gf - item.ga;
+
+
+                return `
+                    <tr>
+
+                        <td>
+                            ${index + 1}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(
+                                item.team.name
+                            )}
+                        </td>
+
+                        <td>
+                            ${item.played}
+                        </td>
+
+                        <td>
+                            ${item.wins}
+                        </td>
+
+                        <td>
+                            ${item.draws}
+                        </td>
+
+                        <td>
+                            ${item.losses}
+                        </td>
+
+                        <td>
+                            ${item.gf}
+                        </td>
+
+                        <td>
+                            ${item.ga}
+                        </td>
+
+                        <td>
+                            ${
+                                gd > 0
+                                    ? "+"
+                                    : ""
+                            }${gd}
+                        </td>
+
+                        <td>
+                            <strong>
+                                ${item.points}
+                            </strong>
+                        </td>
+
+                    </tr>
+                `;
+            })
+            .join("");
 }
 
 
@@ -438,15 +763,21 @@ function renderStandings() {
    ========================= */
 
 function renderTeams() {
-    const container = document.getElementById("teams");
+
+    const container =
+        document.getElementById("teams");
 
     if (!container) return;
 
-    const teams = Array.isArray(leagueData.teams)
-        ? leagueData.teams
-        : [];
+
+    const teams =
+        Array.isArray(leagueData.teams)
+            ? leagueData.teams
+            : [];
+
 
     if (teams.length === 0) {
+
         container.innerHTML = `
             <div class="card">
                 لا توجد فرق حاليًا.
@@ -456,89 +787,108 @@ function renderTeams() {
         return;
     }
 
-    container.innerHTML = teams
-        .map(team => {
 
-            const players = Array.isArray(team.players)
-                ? team.players
-                : [];
+    container.innerHTML =
+        teams
+            .map(team => {
 
-            return `
-                <div class="team-card">
+                const players =
+                    Array.isArray(team.players)
+                        ? team.players
+                        : [];
 
-                    <div class="team-card-head">
 
-                        ${
-                            team.logo
-                            ? `
-                                <img
-                                    src="${escapeAttribute(team.logo)}"
-                                    alt="${escapeAttribute(team.name)}"
-                                >
-                            `
-                            : ""
-                        }
+                return `
+                    <div class="team-card">
 
-                        <div>
-                            <strong>
-                                ${escapeHtml(team.name)}
-                            </strong>
+                        <div class="team-card-head">
+
+                            ${
+                                team.logo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(team.logo)}"
+                                            alt="${escapeAttribute(team.name)}"
+                                        >
+                                    `
+                                    : ""
+                            }
 
                             <div>
-                                ${players.length} لاعب
+
+                                <strong>
+                                    ${escapeHtml(
+                                        team.name
+                                    )}
+                                </strong>
+
+                                <div>
+                                    ${players.length}
+                                    لاعب
+                                </div>
+
                             </div>
+
+                        </div>
+
+
+                        <div class="players">
+
+                            ${
+                                players.length
+                                    ? players
+                                        .map(player => {
+
+                                            const playerName =
+                                                typeof player === "string"
+                                                    ? player
+                                                    : player.name || "";
+
+
+                                            const image =
+                                                typeof player === "object"
+                                                    ? player.image || ""
+                                                    : "";
+
+
+                                            return `
+                                                <div class="player">
+
+                                                    ${
+                                                        image
+                                                            ? `
+                                                                <img
+                                                                    src="${escapeAttribute(image)}"
+                                                                    alt="${escapeAttribute(playerName)}"
+                                                                >
+                                                            `
+                                                            : ""
+                                                    }
+
+                                                    <div class="player-name">
+                                                        ${escapeHtml(
+                                                            playerName
+                                                        )}
+                                                    </div>
+
+                                                </div>
+                                            `;
+
+                                        })
+                                        .join("")
+                                    : `
+                                        <div>
+                                            لا يوجد لاعبين.
+                                        </div>
+                                    `
+                            }
+
                         </div>
 
                     </div>
-
-
-                    <div class="players">
-
-                        ${
-                            players.length
-                            ? players.map(player => {
-
-                                const playerName =
-                                    typeof player === "string"
-                                        ? player
-                                        : player.name || "";
-
-                                const image =
-                                    typeof player === "object"
-                                        ? player.image || ""
-                                        : "";
-
-                                return `
-                                    <div class="player">
-
-                                        ${
-                                            image
-                                            ? `
-                                                <img
-                                                    src="${escapeAttribute(image)}"
-                                                    alt="${escapeAttribute(playerName)}"
-                                                >
-                                            `
-                                            : ""
-                                        }
-
-                                        <div class="player-name">
-                                            ${escapeHtml(playerName)}
-                                        </div>
-
-                                    </div>
-                                `;
-
-                            }).join("")
-                            : "<div>لا يوجد لاعبين.</div>"
-                        }
-
-                    </div>
-
-                </div>
-            `;
-        })
-        .join("");
+                `;
+            })
+            .join("");
 }
 
 
@@ -547,15 +897,21 @@ function renderTeams() {
    ========================= */
 
 function renderNews() {
-    const container = document.getElementById("news");
+
+    const container =
+        document.getElementById("news");
 
     if (!container) return;
 
-    const news = Array.isArray(leagueData.news)
-        ? leagueData.news
-        : [];
+
+    const news =
+        Array.isArray(leagueData.news)
+            ? leagueData.news
+            : [];
+
 
     if (news.length === 0) {
+
         container.innerHTML = `
             <div class="card">
                 لا توجد أخبار حاليًا.
@@ -565,59 +921,86 @@ function renderNews() {
         return;
     }
 
-    container.innerHTML = news
-        .map(item => {
 
-            let media = "";
+    container.innerHTML =
+        news
+            .map(item => {
 
-            if (item.image) {
-                media += `
-                    <img
-                        src="${escapeAttribute(item.image)}"
-                        alt=""
-                    >
-                `;
-            }
+                let media = "";
 
-            if (item.video) {
-                media += `
-                    <video
-                        src="${escapeAttribute(item.video)}"
-                        controls
-                    ></video>
-                `;
-            }
 
-            if (item.youtube) {
-                media += `
-                    <iframe
-                        src="${escapeAttribute(item.youtube)}"
-                        allowfullscreen
-                    ></iframe>
-                `;
-            }
+                if (item.image) {
 
-            return `
-                <article class="news-card">
+                    media += `
+                        <img
+                            src="${escapeAttribute(item.image)}"
+                            alt=""
+                        >
+                    `;
+                }
 
-                    ${media}
 
-                    <div class="news-content">
+                if (item.video) {
 
-                        <h3 class="news-title">
-                            ${escapeHtml(item.title || "خبر")}
-                        </h3>
+                    media += `
+                        <video
+                            src="${escapeAttribute(item.video)}"
+                            controls
+                        ></video>
+                    `;
+                }
 
-                        <div class="news-text">
-                            ${escapeHtml(item.text || "")}
+
+                if (item.videoUrl) {
+
+                    media += `
+                        <video
+                            src="${escapeAttribute(item.videoUrl)}"
+                            controls
+                        ></video>
+                    `;
+                }
+
+
+                if (item.youtube) {
+
+                    media += `
+                        <iframe
+                            src="${escapeAttribute(item.youtube)}"
+                            allowfullscreen
+                        ></iframe>
+                    `;
+                }
+
+
+                return `
+                    <article class="news-card">
+
+                        ${media}
+
+                        <div class="news-content">
+
+                            <h3 class="news-title">
+                                ${escapeHtml(
+                                    item.title ||
+                                    "خبر"
+                                )}
+                            </h3>
+
+                            <div class="news-text">
+                                ${escapeHtml(
+                                    item.text ||
+                                    item.content ||
+                                    ""
+                                )}
+                            </div>
+
                         </div>
 
-                    </div>
-
-                </article>
-            `;
-        })
-        .join("");
+                    </article>
+                `;
+            })
+            .join("");
 }
 
 
@@ -626,37 +1009,113 @@ function renderNews() {
    ========================= */
 
 function renderScorers() {
-    const container = document.getElementById("scorers");
+
+    const container =
+        document.getElementById("scorers");
 
     if (!container) return;
 
-    const matches = Array.isArray(leagueData.matches)
-        ? leagueData.matches
-        : [];
+
+    /*
+     * نستخدم player_stats إذا كانت
+     * موجودة داخل البيانات الرئيسية.
+     *
+     * وإذا لم تكن موجودة نحسب الأهداف
+     * من المباريات.
+     */
 
     const stats = {};
 
+
+    if (
+        Array.isArray(leagueData.player_stats)
+    ) {
+
+        leagueData.player_stats.forEach(item => {
+
+            if (!item || !item.name) {
+                return;
+            }
+
+
+            const goals =
+                Number(item.goals || 0);
+
+
+            stats[item.name] =
+                (stats[item.name] || 0) +
+                goals;
+        });
+    }
+
+
+    /*
+     * حساب الأهداف من المباريات أيضًا.
+     */
+
+    const matches =
+        Array.isArray(leagueData.matches)
+            ? leagueData.matches
+            : [];
+
+
     matches.forEach(match => {
 
-        if (!Array.isArray(match.scorers)) return;
+        if (!Array.isArray(match.scorers)) {
+            return;
+        }
+
 
         match.scorers.forEach(item => {
+
+            if (!item) return;
+
 
             const name =
                 typeof item === "string"
                     ? item
-                    : item.player || item.name;
+                    : item.name ||
+                      item.player;
+
 
             if (!name) return;
 
-            stats[name] = (stats[name] || 0) + 1;
+
+            /*
+             * إذا كانت player_stats موجودة
+             * فلا نكرر الهدف الموجود فيها.
+             *
+             * لذلك نحسب من المباريات فقط
+             * عندما لا توجد إحصائيات.
+             */
+
+            if (
+                !Array.isArray(
+                    leagueData.player_stats
+                )
+            ) {
+
+                const goals =
+                    typeof item === "object"
+                        ? Number(item.goals || 1)
+                        : 1;
+
+
+                stats[name] =
+                    (stats[name] || 0) +
+                    goals;
+            }
         });
     });
 
-    const list = Object.entries(stats)
-        .sort((a, b) => b[1] - a[1]);
+
+    const list =
+        Object.entries(stats)
+            .sort((a, b) => b[1] - a[1]);
+
 
     if (list.length === 0) {
+
         container.innerHTML = `
             <li>
                 لا توجد أهداف مسجلة حاليًا.
@@ -666,14 +1125,23 @@ function renderScorers() {
         return;
     }
 
-    container.innerHTML = list
-        .map(([name, goals]) => `
-            <li>
-                <span>${escapeHtml(name)}</span>
-                <strong>${goals}</strong>
-            </li>
-        `)
-        .join("");
+
+    container.innerHTML =
+        list
+            .map(([name, goals]) => `
+                <li>
+
+                    <span>
+                        ${escapeHtml(name)}
+                    </span>
+
+                    <strong>
+                        ${goals}
+                    </strong>
+
+                </li>
+            `)
+            .join("");
 }
 
 
@@ -682,52 +1150,121 @@ function renderScorers() {
    ========================= */
 
 function renderCards() {
-    const container = document.getElementById("cards");
+
+    const container =
+        document.getElementById("cards");
 
     if (!container) return;
 
-    const matches = Array.isArray(leagueData.matches)
-        ? leagueData.matches
-        : [];
 
     const stats = {};
 
-    matches.forEach(match => {
 
-        if (!Array.isArray(match.cards)) return;
+    /*
+     * إذا كانت player_stats موجودة
+     * نستخدمها مباشرة.
+     */
 
-        match.cards.forEach(item => {
+    if (
+        Array.isArray(leagueData.player_stats)
+    ) {
 
-            const name =
-                typeof item === "string"
-                    ? item
-                    : item.player || item.name;
+        leagueData.player_stats.forEach(item => {
 
-            if (!name) return;
-
-            const type =
-                typeof item === "object"
-                    ? item.type || "yellow"
-                    : "yellow";
-
-            if (!stats[name]) {
-                stats[name] = {
-                    yellow: 0,
-                    red: 0
-                };
+            if (!item || !item.name) {
+                return;
             }
 
-            if (type === "red") {
-                stats[name].red++;
-            } else {
-                stats[name].yellow++;
-            }
+
+            stats[item.name] = {
+
+                yellow:
+                    Number(
+                        item.yellow_cards || 0
+                    ),
+
+                red:
+                    Number(
+                        item.red_cards || 0
+                    )
+            };
         });
-    });
+    }
 
-    const list = Object.entries(stats);
+
+    /*
+     * وإذا لم تكن player_stats موجودة
+     * نحسب البطاقات من المباريات.
+     */
+
+    if (
+        !Array.isArray(
+            leagueData.player_stats
+        )
+    ) {
+
+        const matches =
+            Array.isArray(leagueData.matches)
+                ? leagueData.matches
+                : [];
+
+
+        matches.forEach(match => {
+
+            if (!Array.isArray(match.cards)) {
+                return;
+            }
+
+
+            match.cards.forEach(item => {
+
+                if (!item) return;
+
+
+                const name =
+                    typeof item === "string"
+                        ? item
+                        : item.name ||
+                          item.player;
+
+
+                if (!name) return;
+
+
+                const type =
+                    typeof item === "object"
+                        ? item.type || "yellow"
+                        : "yellow";
+
+
+                if (!stats[name]) {
+
+                    stats[name] = {
+                        yellow: 0,
+                        red: 0
+                    };
+                }
+
+
+                if (type === "red") {
+
+                    stats[name].red++;
+
+                } else {
+
+                    stats[name].yellow++;
+                }
+            });
+        });
+    }
+
+
+    const list =
+        Object.entries(stats);
+
 
     if (list.length === 0) {
+
         container.innerHTML = `
             <li>
                 لا توجد بطاقات مسجلة حاليًا.
@@ -737,18 +1274,25 @@ function renderCards() {
         return;
     }
 
-    container.innerHTML = list
-        .map(([name, cards]) => `
-            <li>
-                <span>${escapeHtml(name)}</span>
-                <span>
-                    🟨 ${cards.yellow}
-                    &nbsp;
-                    🟥 ${cards.red}
-                </span>
-            </li>
-        `)
-        .join("");
+
+    container.innerHTML =
+        list
+            .map(([name, cards]) => `
+                <li>
+
+                    <span>
+                        ${escapeHtml(name)}
+                    </span>
+
+                    <span>
+                        🟨 ${cards.yellow}
+                        &nbsp;
+                        🟥 ${cards.red}
+                    </span>
+
+                </li>
+            `)
+            .join("");
 }
 
 
@@ -757,47 +1301,71 @@ function renderCards() {
    ========================= */
 
 function renderNextMatch() {
-    const container = document.getElementById("nextMatch");
+
+    const container =
+        document.getElementById("nextMatch");
 
     if (!container) return;
 
-    const matches = Array.isArray(leagueData.matches)
-        ? leagueData.matches
-        : [];
 
-    const upcoming = matches
-        .filter(match => match.status !== "finished")
-        .filter(match => match.date)
-        .sort(
-            (a, b) =>
-                new Date(a.date) -
-                new Date(b.date)
-        )[0];
+    const matches =
+        Array.isArray(leagueData.matches)
+            ? leagueData.matches
+            : [];
+
+
+    const upcoming =
+        matches
+            .filter(match =>
+                match.status !== "finished"
+            )
+            .filter(match => match.date)
+            .sort((a, b) =>
+                getMatchDate(a.date) -
+                getMatchDate(b.date)
+            )[0];
+
 
     if (!upcoming) {
+
         container.textContent =
             "لا توجد مباراة قادمة حاليًا.";
 
         return;
     }
 
+
     container.innerHTML = `
         <div style="text-align:center">
 
             <strong>
-                ${escapeHtml(upcoming.team1 || "")}
+                ${escapeHtml(
+                    upcoming.team1 || ""
+                )}
             </strong>
 
-            <span> × </span>
+            <span>
+                ×
+            </span>
 
             <strong>
-                ${escapeHtml(upcoming.team2 || "")}
+                ${escapeHtml(
+                    upcoming.team2 || ""
+                )}
             </strong>
 
             <br>
 
             <span>
-                ${formatDate(upcoming.date)}
+                ${formatMatchDate(
+                    upcoming.date
+                )}
+
+                ${
+                    upcoming.time
+                        ? ` - ${escapeHtml(upcoming.time)}`
+                        : ""
+                }
             </span>
 
         </div>
@@ -810,9 +1378,11 @@ function renderNextMatch() {
    ========================= */
 
 function getTeam(name) {
+
     if (!Array.isArray(leagueData.teams)) {
         return null;
     }
+
 
     return leagueData.teams.find(
         team => team.name === name
@@ -821,26 +1391,143 @@ function getTeam(name) {
 
 
 /* =========================
-   التاريخ
+   تحويل التاريخ
    ========================= */
 
-function formatDate(value) {
-    if (!value) return "بدون تاريخ";
+function getMatchDate(value) {
 
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return escapeHtml(String(value));
+    if (!value) {
+        return Number.MAX_SAFE_INTEGER;
     }
 
-    return date.toLocaleString(
+
+    /*
+     * أولًا نحاول التاريخ العادي.
+     */
+
+    const normalDate =
+        new Date(value);
+
+
+    if (
+        !Number.isNaN(
+            normalDate.getTime()
+        )
+    ) {
+
+        return normalDate.getTime();
+    }
+
+
+    /*
+     * معالجة التواريخ العربية الموجودة
+     * حاليًا في قاعدة البيانات.
+     *
+     * مثال:
+     * 28 أغسطس 2026
+     */
+
+    const months = {
+
+        "يناير": 0,
+        "فبراير": 1,
+        "مارس": 2,
+        "أبريل": 3,
+        "مايو": 4,
+        "يونيو": 5,
+        "يوليو": 6,
+        "أغسطس": 7,
+        "سبتمبر": 8,
+        "أكتوبر": 9,
+        "نوفمبر": 10,
+        "ديسمبر": 11
+
+    };
+
+
+    const match =
+        String(value).match(
+            /(\d{1,2})\s+([^\s]+)\s+(\d{4})/
+        );
+
+
+    if (!match) {
+
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+
+    const day =
+        Number(match[1]);
+
+
+    const month =
+        months[match[2]];
+
+
+    const year =
+        Number(match[3]);
+
+
+    if (
+        month === undefined ||
+        Number.isNaN(day) ||
+        Number.isNaN(year)
+    ) {
+
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+
+    return new Date(
+        year,
+        month,
+        day
+    ).getTime();
+}
+
+
+/* =========================
+   عرض التاريخ
+   ========================= */
+
+function formatMatchDate(value) {
+
+    if (!value) {
+        return "بدون تاريخ";
+    }
+
+
+    /*
+     * إذا كان التاريخ عربيًا،
+     * نعرضه كما هو بدل محاولة
+     * تحويله إلى تاريخ غير صالح.
+     */
+
+    const parsed =
+        getMatchDate(value);
+
+
+    if (
+        parsed === Number.MAX_SAFE_INTEGER
+    ) {
+
+        return escapeHtml(
+            String(value)
+        );
+    }
+
+
+    const date =
+        new Date(parsed);
+
+
+    return date.toLocaleDateString(
         "ar-YE",
         {
             year: "numeric",
             month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit"
+            day: "numeric"
         }
     );
 }
@@ -851,13 +1538,25 @@ function formatDate(value) {
    ========================= */
 
 function setupTheme() {
-    const button = document.getElementById("themeButton");
+
+    const button =
+        document.getElementById(
+            "themeButton"
+        );
+
 
     if (!button) return;
 
-    button.addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-    });
+
+    button.addEventListener(
+        "click",
+        () => {
+
+            document.body.classList.toggle(
+                "dark-mode"
+            );
+        }
+    );
 }
 
 
@@ -866,15 +1565,37 @@ function setupTheme() {
    ========================= */
 
 function escapeHtml(value) {
+
     return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 }
 
 
 function escapeAttribute(value) {
+
     return escapeHtml(value);
 }
