@@ -81,7 +81,7 @@ async function loadLeagueData() {
     try {
 
         const { data, error } = await supabaseClient
-            .from("new_league_data")
+            .from("league_data")
             .select("data")
             .eq("id", 1)
             .maybeSingle();
