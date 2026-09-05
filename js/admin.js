@@ -3,137 +3,218 @@
    دوري ميدي للمحترفين 2026
    ========================================= */
 
-const ADMIN_UID = "91807e41-d5da-46b8-a6e6-7a8b07a40779";
+document.addEventListener("DOMContentLoaded", function () {
 
-const loginForm = document.getElementById("adminLoginForm");
-const emailInput = document.getElementById("adminEmail");
-const passwordInput = document.getElementById("adminPassword");
-const loginButton = document.getElementById("adminLoginButton");
-const messageBox = document.getElementById("adminLoginMessage");
+    const ADMIN_UID =
+        "91807e41-d5da-46b8-a6e6-7a8b07a40779";
+
+    const loginForm =
+        document.getElementById("adminLoginForm");
+
+    const emailInput =
+        document.getElementById("adminEmail");
+
+    const passwordInput =
+        document.getElementById("adminPassword");
+
+    const loginButton =
+        document.getElementById("adminLoginButton");
+
+    const messageBox =
+        document.getElementById("adminLoginMessage");
 
 
-function showMessage(message, type = "") {
+    /* =========================
+       التأكد من وجود العناصر
+       ========================= */
 
-    messageBox.textContent = message;
-    messageBox.className = "admin-login-message";
-
-    if (type) {
-        messageBox.classList.add(type);
+    if (!loginForm) {
+        console.error("لم يتم العثور على نموذج تسجيل الدخول.");
+        return;
     }
-}
 
-
-loginForm.addEventListener("submit", async function (event) {
-
-    event.preventDefault();
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-
-        showMessage(
-            "أدخل البريد الإلكتروني وكلمة المرور.",
-            "error"
-        );
-
+    if (!emailInput || !passwordInput || !loginButton) {
+        console.error("عناصر تسجيل الدخول ناقصة.");
         return;
     }
 
 
-    loginButton.disabled = true;
-    loginButton.textContent = "جاري تسجيل الدخول...";
+    /* =========================
+       عرض الرسائل
+       ========================= */
 
-    showMessage("");
+    function showMessage(message, type = "") {
 
+        if (!messageBox) return;
 
-    try {
+        messageBox.textContent = message;
+        messageBox.className =
+            "admin-login-message";
 
-        const { data, error } =
-            await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-
-        if (error) {
-
-            console.error(
-                "خطأ تسجيل الدخول:",
-                error
-            );
-
-            showMessage(
-                "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-                "error"
-            );
-
-            return;
+        if (type) {
+            messageBox.classList.add(type);
         }
-
-
-        if (!data || !data.user) {
-
-            showMessage(
-                "تعذر التحقق من حساب الإدارة.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        /* =========================
-           التحقق من حساب الإدارة
-           ========================= */
-
-        if (data.user.id !== ADMIN_UID) {
-
-            await supabaseClient.auth.signOut();
-
-            showMessage(
-                "هذا الحساب ليس لديه صلاحية دخول الإدارة.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        /* =========================
-           الدخول إلى لوحة الإدارة
-           ========================= */
-
-        showMessage(
-            "تم تسجيل الدخول بنجاح...",
-            "success"
-        );
-
-
-        setTimeout(function () {
-
-            window.location.href = "admin-panel.html";
-
-        }, 700);
-
-
-    } catch (error) {
-
-        console.error(
-            "خطأ غير متوقع:",
-            error
-        );
-
-        showMessage(
-            "حدث خطأ غير متوقع. حاول مرة أخرى.",
-            "error"
-        );
-
-    } finally {
-
-        loginButton.disabled = false;
-        loginButton.textContent = "دخول الإدارة";
-
     }
+
+
+    /* =========================
+       تسجيل الدخول
+       ========================= */
+
+    loginForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+
+            const email =
+                emailInput.value.trim();
+
+            const password =
+                passwordInput.value;
+
+
+            if (!email || !password) {
+
+                showMessage(
+                    "أدخل البريد الإلكتروني وكلمة المرور.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            loginButton.disabled = true;
+            loginButton.textContent =
+                "جاري تسجيل الدخول...";
+
+
+            showMessage("");
+
+
+            try {
+
+                /* التأكد من وجود Supabase */
+
+                if (
+                    typeof supabaseClient === "undefined"
+                ) {
+
+                    throw new Error(
+                        "supabaseClient غير موجود."
+                    );
+                }
+
+
+                /* تسجيل الدخول */
+
+                const {
+                    data,
+                    error
+                } =
+                    await supabaseClient.auth
+                        .signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+
+
+                if (error) {
+
+                    console.error(
+                        "Supabase Login Error:",
+                        error
+                    );
+
+                    showMessage(
+                        error.message ||
+                        "فشل تسجيل الدخول.",
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                if (!data || !data.user) {
+
+                    showMessage(
+                        "لم يتم العثور على حساب المستخدم.",
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                /* =========================
+                   التحقق من حساب الإدارة
+                   ========================= */
+
+                if (
+                    data.user.id !== ADMIN_UID
+                ) {
+
+                    await supabaseClient.auth.signOut();
+
+                    showMessage(
+                        "هذا الحساب ليس حساب الإدارة.",
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                /* =========================
+                   نجاح الدخول
+                   ========================= */
+
+                showMessage(
+                    "تم تسجيل الدخول بنجاح...",
+                    "success"
+                );
+
+
+                window.location.href =
+                    "admin-panel.html";
+
+            }
+
+
+            catch (error) {
+
+                console.error(
+                    "Admin Login Error:",
+                    error
+                );
+
+                showMessage(
+                    error.message ||
+                    "حدث خطأ أثناء تسجيل الدخول.",
+                    "error"
+                );
+
+            }
+
+
+            finally {
+
+                loginButton.disabled = false;
+
+                loginButton.textContent =
+                    "دخول الإدارة";
+
+            }
+
+        }
+    );
+
+
+    console.log(
+        "صفحة تسجيل دخول الإدارة جاهزة."
+    );
 
 });
