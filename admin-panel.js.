@@ -1,5 +1,6 @@
 /* =========================================
-   لوحة إدارة دوري ميدي للمحترفين 2026 - الكود المطور والمستجيب
+   لوحة إدارة دوري ميدي للمحترفين 2026
+   النسخة المُصلحة والمستقرة
    ========================================= */
 
 const ADMIN_UID = "91807e41-d5da-46b8-a6e6-7a8b07a40779";
@@ -7,251 +8,734 @@ const DATA_ROW_ID = 1;
 
 let leagueData = null;
 
-// دالة إظهار الرسائل
+/* =========================
+   رسائل
+   ========================= */
 function showMessage(msg, type = "") {
-    const messageBox = document.getElementById("adminPanelMessage");
-    if (!messageBox) return;
-    messageBox.textContent = msg;
-    messageBox.className = "admin-panel-message " + type;
+    const box = document.getElementById("adminPanelMessage");
+    if (!box) return;
+    box.textContent = msg;
+    box.className = "admin-panel-message " + type;
 }
 
-// 1. التحقق من صلاحية المسؤول
+/* =========================
+   التحقق من صلاحية الأدمن
+   ========================= */
 async function checkAdminAccess() {
     try {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
+
         if (error || !session || !session.user || session.user.id !== ADMIN_UID) {
             window.location.href = "admin.html";
             return false;
         }
         return true;
-    } catch (error) {
+    } catch (err) {
+        console.error(err);
         window.location.href = "admin.html";
         return false;
     }
 }
 
-// 2. تحميل البيانات من Supabase
+/* =========================
+   تحميل البيانات
+   ========================= */
 async function loadLeagueData() {
     showMessage("جاري تحميل البيانات...", "info");
+
     const { data, error } = await supabaseClient
         .from("league_data")
         .select("data")
         .eq("id", DATA_ROW_ID)
         .maybeSingle();
 
-    if (error || !data) {
-        alert("تعذر جلب البيانات من Supabase. تأكد من إعدادات الجدول والاتصال.");
-        throw new Error("فشل الجلب");
+    if (error) {
+        showMessage("خطأ في التحميل: " + error.message, "error");
+        throw error;
     }
 
-    let parsedData = data.data;
-    if (typeof parsedData === "string") {
-        try { parsedData = JSON.parse(parsedData); } catch (e) {}
+    if (!data || data.data === null || data.data === undefined) {
+        showMessage("لا توجد بيانات في قاعدة البيانات", "error");
+        throw new Error("No data");
     }
 
-    leagueData = parsedData || {};
-    if (!Array.isArray(leagueData.matches)) leagueData.matches = [];
-    if (!Array.isArray(leagueData.teams)) leagueData.teams = [];
-    if (!Array.isArray(leagueData.players)) leagueData.players = [];
-    if (!Array.isArray(leagueData.news)) leagueData.news = [];
-    if (!leagueData.settings) leagueData.settings = { leagueName: "دوري ميدي للمحترفين", season: "2026" };
+    let raw = data.data;
+
+    // لو كان String نحوله
+    if (typeof raw === "string") {
+        try {
+            raw = JSON.parse(raw);
+        } catch (e) {
+            showMessage("خطأ في تحويل البيانات", "error");
+            throw e;
+        }
+    }
+
+    // نستخدم نفس منطق normalize الموجود في الموقع
+    leagueData = normalizeAdminData(raw);
 
     showMessage("تم تحميل البيانات بنجاح", "success");
     return leagueData;
 }
 
-// 3. حفظ البيانات في Supabase
+/* =========================
+   توحيد شكل البيانات
+   ========================= */
+function normalizeAdminData(raw) {
+    const data = raw || {};
+
+    const settings = {
+        leagueName: "دوري ميدي للمحترفين",
+        season: "2026",
+        logo: "https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png",
+        heroTitle: "دوري ميدي",
+        heroSubtitle: "للمحترفين",
+        description: "أكثر من مجرد دوري... إنها أسطورة",
+        ...(data.settings || {})
+    };
+
+    const teams = Array.isArray(data.teams) ? data.teams : [];
+    const matches = Array.isArray(data.matches) ? data.matches : [];
+    const news = Array.isArray(data.news) ? data.news : [];
+
+    // players في الموقع الأصلي object مربوط بالـ team id
+    let players = data.players && typeof data.players === "object" ? data.players : {};
+
+    // نربط اللاعبين بالفرق لو مش موجودين
+    const normalizedTeams = teams.map((team, idx) => {
+        const teamId = team.id || `team_${idx}`;
+        const teamPlayers = Array.isArray(players[teamId])
+            ? players[teamId]
+            : (Array.isArray(team.players) ? team.players : []);
+
+        return {
+            id: teamId,
+            name: team.name || "فريق بدون اسم",
+            logo: team.logo || "",
+            players: teamPlayers
+        };
+    });
+
+    // نحدث كائن اللاعبين
+    players = {};
+    normalizedTeams.forEach(t => {
+        players[t.id] = t.players;
+    });
+
+    return {
+        settings,
+        teams: normalizedTeams,
+        players,
+        matches,
+        news
+    };
+}
+
+/* =========================
+   حفظ البيانات
+   ========================= */
 async function saveLeagueData() {
-    if (!leagueData) return;
+    if (!leagueData) return false;
+
+    // نجهز البيانات للحفظ بنفس الشكل اللي الموقع بيقرأه
+    const toSave = {
+        settings: leagueData.settings,
+        teams: leagueData.teams.map(t => ({
+            id: t.id,
+            name: t.name,
+            logo: t.logo || ""
+        })),
+        players: leagueData.players,
+        matches: leagueData.matches,
+        news: leagueData.news
+    };
+
     const { error } = await supabaseClient
         .from("league_data")
         .update({
-            data: JSON.stringify(leagueData),
+            data: toSave,                 // نرسل Object (أفضل لو العمود jsonb)
             updated_at: new Date().toISOString()
         })
         .eq("id", DATA_ROW_ID);
 
     if (error) {
-        alert("خطأ في الحفظ: " + error.message);
-        throw error;
+        // لو فشل بسبب نوع العمود، نجرب كـ string
+        const { error: err2 } = await supabaseClient
+            .from("league_data")
+            .update({
+                data: JSON.stringify(toSave),
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", DATA_ROW_ID);
+
+        if (err2) {
+            showMessage("فشل الحفظ: " + err2.message, "error");
+            alert("فشل الحفظ:\n" + err2.message);
+            return false;
+        }
     }
-    alert("تم الحفظ بنجاح وتحديث البيانات!");
+
+    showMessage("تم الحفظ بنجاح ✓", "success");
     return true;
 }
 
-// دالة إنشاء النافذة المنبثقة
-function createModalContainer(titleHtml) {
-    let modal = document.getElementById("adminUniversalModal");
-    if (modal) modal.remove();
+/* =========================
+   إنشاء Modal باستخدام كلاسات الـ CSS الموجودة
+   ========================= */
+function createModal(title) {
+    // نشيل أي مودال قديم
+    const old = document.getElementById("adminUniversalModal");
+    if (old) old.remove();
 
-    modal = document.createElement("div");
+    const modal = document.createElement("div");
     modal.id = "adminUniversalModal";
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
-        align-items: center; z-index: 99999; padding: 15px; box-sizing: border-box;
-    `;
+    modal.className = "admin-modal";
 
     modal.innerHTML = `
-        <div style="background: #121212; border: 2px solid #d7ad4b; color: #fff; border-radius: 12px;
-                    width: 100%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
-            <div style="padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #d7ad4b;">${titleHtml}</h3>
-                <button id="closeAdminModal" style="background: #dc3545; border: none; color: #fff; font-size: 16px; font-weight:bold; padding:4px 10px; border-radius:4px; cursor: pointer;">✕ إغلاق</button>
+        <div class="admin-modal-overlay"></div>
+        <div class="admin-modal-box">
+            <div class="admin-modal-header">
+                <h2>${title}</h2>
+                <button class="admin-modal-close" type="button">×</button>
             </div>
-            <div id="modalBody" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+            <div class="admin-modal-toolbar" id="modalToolbar"></div>
+            <div id="modalBody" style="padding: 15px 20px 25px;"></div>
         </div>
     `;
 
     document.body.appendChild(modal);
-    document.getElementById("closeAdminModal").onclick = () => modal.remove();
-    return document.getElementById("modalBody");
+
+    // إغلاق
+    modal.querySelector(".admin-modal-close").onclick = () => modal.remove();
+    modal.querySelector(".admin-modal-overlay").onclick = () => modal.remove();
+
+    return {
+        toolbar: document.getElementById("modalToolbar"),
+        body: document.getElementById("modalBody"),
+        close: () => modal.remove()
+    };
 }
 
-/* =========================================
-   إدارة المباريات والنتائج والكروت
-   ========================================= */
+/* =========================
+   1. إدارة المباريات
+   ========================= */
 async function openMatchesManager() {
     try {
         await loadLeagueData();
-        const body = createModalContainer("إدارة المباريات والنتائج والكروت");
+        const { toolbar, body } = createModal("إدارة المباريات");
 
-        let html = `<button onclick="addNewMatch()" style="background:#28a745; color:#fff; border:none; padding:10px 15px; border-radius:6px; margin-bottom:15px; cursor:pointer; font-weight:bold; width:100%;">+ إضافة مباراة جديدة</button>`;
+        toolbar.innerHTML = `
+            <button class="admin-primary-button" id="btnAddMatch">+ إضافة مباراة جديدة</button>
+        `;
 
+        document.getElementById("btnAddMatch").onclick = () => {
+            leagueData.matches.unshift({
+                team1: "",
+                team2: "",
+                score1: null,
+                score2: null,
+                status: "upcoming",
+                date: "",
+                time: "",
+                stage: "الجولة 1",
+                scorers: [],
+                cards: [],
+                details: ""
+            });
+            openMatchesManager();
+        };
+
+        if (leagueData.matches.length === 0) {
+            body.innerHTML = `<div style="text-align:center;color:#888;padding:30px;">لا توجد مباريات حاليًا</div>`;
+            return;
+        }
+
+        let html = "";
         leagueData.matches.forEach((m, i) => {
+            const isFinished = m.status === "finished";
             html += `
-            <div style="background: #1c1c1c; border: 1px solid #444; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <strong style="color:#d7ad4b;">مباراة (${i + 1}) - الجولة ${m.round || 1}</strong>
-                    <button onclick="deleteMatch(${i})" style="background:#dc3545; color:#fff; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;">حذف</button>
-                </div>
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div class="admin-match-item">
                     <div>
-                        <label style="font-size:12px; color:#aaa;">الفريق الأول:</label>
-                        <input type="text" id="m_team1_${i}" value="${m.team1 || ''}" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
+                        <strong>${m.team1 || "؟"} × ${m.team2 || "؟"}</strong>
+                        <span style="display:block;margin-top:4px;">
+                            ${m.stage || ""} — ${m.date || "بدون تاريخ"}
+                            ${isFinished ? ` | النتيجة: ${m.score1 ?? 0} - ${m.score2 ?? 0}` : " | قادمة"}
+                        </span>
                     </div>
-                    <div>
-                        <label style="font-size:12px; color:#aaa;">الفريق الثاني:</label>
-                        <input type="text" id="m_team2_${i}" value="${m.team2 || ''}" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
+                    <div class="admin-match-actions">
+                        <button onclick="editMatch(${i})">تعديل</button>
+                        <button onclick="deleteMatch(${i})" style="color:#ff9b9b;">حذف</button>
                     </div>
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                    <div>
-                        <label style="font-size:12px; color:#aaa;">أهداف الأخير:</label>
-                        <input type="number" id="m_score1_${i}" value="${m.score1 ?? ''}" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#aaa;">أهداف الثاني:</label>
-                        <input type="number" id="m_score2_${i}" value="${m.score2 ?? ''}" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#aaa;">الجولة:</label>
-                        <input type="number" id="m_round_${i}" value="${m.round || 1}" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
-                    </div>
-                </div>
-
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:#aaa;">التاريخ والوقت:</label>
-                    <input type="text" id="m_date_${i}" value="${m.date || ''}" placeholder="مثال: 6 سبتمبر 2026 - 04:30 مساءً" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">
-                </div>
-
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; color:#aaa;">الأحداث والبطاقات (أهداف/كروت مفصولة بفاصلة):</label>
-                    <textarea id="m_events_${i}" rows="2" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #555; padding:6px; border-radius:4px;">${Array.isArray(m.events) ? m.events.join(", ") : (m.events || '')}</textarea>
-                </div>
-
-                <button onclick="saveMatch(${i})" style="background:#d7ad4b; color:#000; font-weight:bold; border:none; padding:8px; border-radius:4px; width:100%; cursor:pointer;">حفظ هذه المباراة</button>
-            </div>`;
+            `;
         });
 
         body.innerHTML = html;
-    } catch(e) {}
-}
-
-window.addNewMatch = function() {
-    leagueData.matches.unshift({ team1: "فريق أ", team2: "فريق ب", score1: null, score2: null, date: "", round: 1, events: [] });
-    openMatchesManager();
-};
-
-window.saveMatch = async function(i) {
-    const eventsVal = document.getElementById(`m_events_${i}`).value;
-    leagueData.matches[i] = {
-        team1: document.getElementById(`m_team1_${i}`).value,
-        team2: document.getElementById(`m_team2_${i}`).value,
-        score1: document.getElementById(`m_score1_${i}`).value !== "" ? Number(document.getElementById(`m_score1_${i}`).value) : null,
-        score2: document.getElementById(`m_score2_${i}`).value !== "" ? Number(document.getElementById(`m_score2_${i}`).value) : null,
-        round: Number(document.getElementById(`m_round_${i}`).value) || 1,
-        date: document.getElementById(`m_date_${i}`).value,
-        events: eventsVal ? eventsVal.split(",").map(e => e.trim()) : []
-    };
-    await saveLeagueData();
-    openMatchesManager();
-};
-
-window.deleteMatch = async function(i) {
-    if (confirm("هل تريد حذف المباراة؟")) {
-        leagueData.matches.splice(i, 1);
-        await saveLeagueData();
-        openMatchesManager();
+    } catch (e) {
+        console.error(e);
+        showMessage("حدث خطأ أثناء فتح إدارة المباريات", "error");
     }
-};
-
-/* =========================================
-   إدارة الفرق واللاعبين والأخبار
-   ========================================= */
-async function openTeamsManager() {
-    await loadLeagueData();
-    const body = createModalContainer("إدارة الفرق الأندية");
-    let html = `<button onclick="addNewTeam()" style="background:#28a745; color:#fff; border:none; padding:8px 12px; border-radius:5px; margin-bottom:15px; cursor:pointer;">+ إضافة فريق جديد</button>`;
-    leagueData.teams.forEach((t, i) => {
-        html += `
-        <div style="background:#1c1c1c; border:1px solid #333; padding:10px; margin-bottom:10px; border-radius:6px; display:flex; gap:8px;">
-            <input type="text" id="t_name_${i}" value="${t.name || ''}" placeholder="اسم الفريق" style="flex:1; background:#2a2a2a; color:#fff; border:1px solid #444; padding:5px;">
-            <button onclick="saveTeam(${i})" style="background:#d7ad4b; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold;">حفظ</button>
-            <button onclick="deleteTeam(${i})" style="background:#dc3545; color:#fff; border:none; padding:5px 10px; border-radius:4px;">حذف</button>
-        </div>`;
-    });
-    body.innerHTML = html;
 }
 
-window.addNewTeam = function() { leagueData.teams.push({ name: "فريق جديد" }); openTeamsManager(); };
-window.saveTeam = async function(i) { leagueData.teams[i].name = document.getElementById(`t_name_${i}`).value; await saveLeagueData(); openTeamsManager(); };
-window.deleteTeam = async function(i) { if(confirm("حذف؟")) { leagueData.teams.splice(i, 1); await saveLeagueData(); openTeamsManager(); } };
+window.editMatch = function (index) {
+    const m = leagueData.matches[index];
+    const { toolbar, body } = createModal("تعديل مباراة");
 
-// ربط النقر الذكي الشامل (يتعرف على أي زر/بطاقة في اللوحة)
+    toolbar.innerHTML = `<button class="admin-primary-button" id="btnSaveMatch">حفظ المباراة</button>`;
+
+    body.innerHTML = `
+        <div class="admin-form-grid">
+            <div class="admin-field">
+                <label>الفريق الأول</label>
+                <input type="text" id="f_team1" value="${m.team1 || ""}">
+            </div>
+            <div class="admin-field">
+                <label>الفريق الثاني</label>
+                <input type="text" id="f_team2" value="${m.team2 || ""}">
+            </div>
+            <div class="admin-field">
+                <label>أهداف الأول</label>
+                <input type="number" id="f_score1" value="${m.score1 ?? ""}">
+            </div>
+            <div class="admin-field">
+                <label>أهداف الثاني</label>
+                <input type="number" id="f_score2" value="${m.score2 ?? ""}">
+            </div>
+            <div class="admin-field">
+                <label>الحالة</label>
+                <select id="f_status">
+                    <option value="upcoming" ${m.status !== "finished" ? "selected" : ""}>قادمة</option>
+                    <option value="finished" ${m.status === "finished" ? "selected" : ""}>منتهية</option>
+                </select>
+            </div>
+            <div class="admin-field">
+                <label>الجولة / المرحلة</label>
+                <input type="text" id="f_stage" value="${m.stage || ""}">
+            </div>
+            <div class="admin-field">
+                <label>التاريخ</label>
+                <input type="text" id="f_date" value="${m.date || ""}" placeholder="مثال: 6 سبتمبر 2026">
+            </div>
+            <div class="admin-field">
+                <label>الوقت</label>
+                <input type="text" id="f_time" value="${m.time || ""}" placeholder="مثال: 16:30">
+            </div>
+        </div>
+
+        <div class="admin-field" style="margin-top:12px;">
+            <label>الهدافون (مفصولين بفاصلة)</label>
+            <input type="text" id="f_scorers" value="${Array.isArray(m.scorers) ? m.scorers.map(s => typeof s === 'string' ? s : s.name).join(', ') : ''}">
+        </div>
+
+        <div class="admin-field">
+            <label>البطاقات (مثال: أحمد:yellow, علي:red)</label>
+            <input type="text" id="f_cards" value="${Array.isArray(m.cards) ? m.cards.map(c => typeof c === 'string' ? c : (c.name + ':' + (c.type||'yellow'))).join(', ') : ''}">
+        </div>
+
+        <div class="admin-field">
+            <label>تفاصيل إضافية</label>
+            <textarea id="f_details">${m.details || ""}</textarea>
+        </div>
+    `;
+
+    document.getElementById("btnSaveMatch").onclick = async () => {
+        const scorersRaw = document.getElementById("f_scorers").value;
+        const cardsRaw = document.getElementById("f_cards").value;
+
+        leagueData.matches[index] = {
+            team1: document.getElementById("f_team1").value.trim(),
+            team2: document.getElementById("f_team2").value.trim(),
+            score1: document.getElementById("f_score1").value === "" ? null : Number(document.getElementById("f_score1").value),
+            score2: document.getElementById("f_score2").value === "" ? null : Number(document.getElementById("f_score2").value),
+            status: document.getElementById("f_status").value,
+            stage: document.getElementById("f_stage").value.trim(),
+            date: document.getElementById("f_date").value.trim(),
+            time: document.getElementById("f_time").value.trim(),
+            scorers: scorersRaw ? scorersRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+            cards: cardsRaw ? cardsRaw.split(",").map(c => {
+                const parts = c.trim().split(":");
+                return parts.length > 1
+                    ? { name: parts[0].trim(), type: parts[1].trim() }
+                    : { name: parts[0].trim(), type: "yellow" };
+            }) : [],
+            details: document.getElementById("f_details").value.trim()
+        };
+
+        const ok = await saveLeagueData();
+        if (ok) openMatchesManager();
+    };
+};
+
+window.deleteMatch = async function (index) {
+    if (!confirm("هل تريد حذف هذه المباراة؟")) return;
+    leagueData.matches.splice(index, 1);
+    const ok = await saveLeagueData();
+    if (ok) openMatchesManager();
+};
+
+/* =========================
+   2. إدارة الفرق
+   ========================= */
+async function openTeamsManager() {
+    try {
+        await loadLeagueData();
+        const { toolbar, body } = createModal("إدارة الفرق");
+
+        toolbar.innerHTML = `<button class="admin-primary-button" id="btnAddTeam">+ إضافة فريق</button>`;
+
+        document.getElementById("btnAddTeam").onclick = () => {
+            const newId = "team_" + Date.now();
+            leagueData.teams.push({
+                id: newId,
+                name: "فريق جديد",
+                logo: "",
+                players: []
+            });
+            leagueData.players[newId] = [];
+            openTeamsManager();
+        };
+
+        if (leagueData.teams.length === 0) {
+            body.innerHTML = `<div style="text-align:center;color:#888;padding:30px;">لا توجد فرق</div>`;
+            return;
+        }
+
+        let html = "";
+        leagueData.teams.forEach((t, i) => {
+            html += `
+                <div class="admin-match-item">
+                    <div>
+                        <strong>${t.name}</strong>
+                        <span style="display:block;margin-top:3px;font-size:11px;color:#777;">
+                            ${(t.players || []).length} لاعب
+                        </span>
+                    </div>
+                    <div class="admin-match-actions">
+                        <button onclick="editTeam(${i})">تعديل</button>
+                        <button onclick="deleteTeam(${i})" style="color:#ff9b9b;">حذف</button>
+                    </div>
+                </div>
+            `;
+        });
+        body.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        showMessage("خطأ في فتح إدارة الفرق", "error");
+    }
+}
+
+window.editTeam = function (index) {
+    const t = leagueData.teams[index];
+    const { toolbar, body } = createModal("تعديل فريق");
+
+    toolbar.innerHTML = `<button class="admin-primary-button" id="btnSaveTeam">حفظ الفريق</button>`;
+
+    body.innerHTML = `
+        <div class="admin-field">
+            <label>اسم الفريق</label>
+            <input type="text" id="t_name" value="${t.name || ""}">
+        </div>
+        <div class="admin-field">
+            <label>رابط الشعار (Logo URL)</label>
+            <input type="text" id="t_logo" value="${t.logo || ""}" placeholder="https://...">
+        </div>
+    `;
+
+    document.getElementById("btnSaveTeam").onclick = async () => {
+        leagueData.teams[index].name = document.getElementById("t_name").value.trim();
+        leagueData.teams[index].logo = document.getElementById("t_logo").value.trim();
+        const ok = await saveLeagueData();
+        if (ok) openTeamsManager();
+    };
+};
+
+window.deleteTeam = async function (index) {
+    if (!confirm("حذف الفريق وجميع لاعبيه؟")) return;
+    const teamId = leagueData.teams[index].id;
+    leagueData.teams.splice(index, 1);
+    delete leagueData.players[teamId];
+    const ok = await saveLeagueData();
+    if (ok) openTeamsManager();
+};
+
+/* =========================
+   3. إدارة اللاعبين
+   ========================= */
+async function openPlayersManager() {
+    try {
+        await loadLeagueData();
+        const { toolbar, body } = createModal("إدارة اللاعبين");
+
+        if (leagueData.teams.length === 0) {
+            body.innerHTML = `<div style="text-align:center;color:#888;padding:30px;">أضف فرقًا أولًا</div>`;
+            return;
+        }
+
+        // اختيار الفريق
+        let options = leagueData.teams.map((t, i) =>
+            `<option value="\( {i}"> \){t.name}</option>`
+        ).join("");
+
+        toolbar.innerHTML = `
+            <select id="playerTeamSelect" style="padding:8px 12px;border-radius:8px;background:#111;color:#fff;border:1px solid #333;">
+                ${options}
+            </select>
+            <button class="admin-primary-button" id="btnAddPlayer">+ إضافة لاعب</button>
+        `;
+
+        const renderPlayers = () => {
+            const teamIndex = Number(document.getElementById("playerTeamSelect").value);
+            const team = leagueData.teams[teamIndex];
+            const players = team.players || [];
+
+            let html = `<h3 style="color:#d7ad4b;margin-bottom:12px;">${team.name}</h3>`;
+
+            if (players.length === 0) {
+                html += `<div style="color:#777;">لا يوجد لاعبين في هذا الفريق</div>`;
+            } else {
+                players.forEach((p, pi) => {
+                    const name = typeof p === "string" ? p : (p.name || "");
+                    const image = typeof p === "object" ? (p.image || "") : "";
+                    html += `
+                        <div class="admin-match-item">
+                            <div>
+                                <strong>${name}</strong>
+                                \( {image ? `<span style="display:block;font-size:11px;color:#666;"> \){image.substring(0,40)}...</span>` : ""}
+                            </div>
+                            <div class="admin-match-actions">
+                                <button onclick="editPlayer(\( {teamIndex}, \){pi})">تعديل</button>
+                                <button onclick="deletePlayer(\( {teamIndex}, \){pi})" style="color:#ff9b9b;">حذف</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            body.innerHTML = html;
+        };
+
+        document.getElementById("playerTeamSelect").onchange = renderPlayers;
+        document.getElementById("btnAddPlayer").onclick = () => {
+            const teamIndex = Number(document.getElementById("playerTeamSelect").value);
+            leagueData.teams[teamIndex].players.push({ name: "لاعب جديد", image: "" });
+            leagueData.players[leagueData.teams[teamIndex].id] = leagueData.teams[teamIndex].players;
+            renderPlayers();
+        };
+
+        renderPlayers();
+    } catch (e) {
+        console.error(e);
+        showMessage("خطأ في فتح إدارة اللاعبين", "error");
+    }
+}
+
+window.editPlayer = function (teamIndex, playerIndex) {
+    const p = leagueData.teams[teamIndex].players[playerIndex];
+    const name = typeof p === "string" ? p : (p.name || "");
+    const image = typeof p === "object" ? (p.image || "") : "";
+
+    const { toolbar, body } = createModal("تعديل لاعب");
+    toolbar.innerHTML = `<button class="admin-primary-button" id="btnSavePlayer">حفظ</button>`;
+
+    body.innerHTML = `
+        <div class="admin-field">
+            <label>اسم اللاعب</label>
+            <input type="text" id="p_name" value="${name}">
+        </div>
+        <div class="admin-field">
+            <label>رابط الصورة</label>
+            <input type="text" id="p_image" value="${image}" placeholder="https://...">
+        </div>
+    `;
+
+    document.getElementById("btnSavePlayer").onclick = async () => {
+        leagueData.teams[teamIndex].players[playerIndex] = {
+            name: document.getElementById("p_name").value.trim(),
+            image: document.getElementById("p_image").value.trim()
+        };
+        leagueData.players[leagueData.teams[teamIndex].id] = leagueData.teams[teamIndex].players;
+        const ok = await saveLeagueData();
+        if (ok) openPlayersManager();
+    };
+};
+
+window.deletePlayer = async function (teamIndex, playerIndex) {
+    if (!confirm("حذف اللاعب؟")) return;
+    leagueData.teams[teamIndex].players.splice(playerIndex, 1);
+    leagueData.players[leagueData.teams[teamIndex].id] = leagueData.teams[teamIndex].players;
+    const ok = await saveLeagueData();
+    if (ok) openPlayersManager();
+};
+
+/* =========================
+   4. إدارة الأخبار
+   ========================= */
+async function openNewsManager() {
+    try {
+        await loadLeagueData();
+        const { toolbar, body } = createModal("إدارة الأخبار");
+
+        toolbar.innerHTML = `<button class="admin-primary-button" id="btnAddNews">+ إضافة خبر</button>`;
+
+        document.getElementById("btnAddNews").onclick = () => {
+            leagueData.news.unshift({
+                title: "خبر جديد",
+                text: "",
+                image: "",
+                youtube: ""
+            });
+            openNewsManager();
+        };
+
+        if (leagueData.news.length === 0) {
+            body.innerHTML = `<div style="text-align:center;color:#888;padding:30px;">لا توجد أخبار</div>`;
+            return;
+        }
+
+        let html = "";
+        leagueData.news.forEach((n, i) => {
+            html += `
+                <div class="admin-match-item">
+                    <div>
+                        <strong>${n.title || "بدون عنوان"}</strong>
+                    </div>
+                    <div class="admin-match-actions">
+                        <button onclick="editNews(${i})">تعديل</button>
+                        <button onclick="deleteNews(${i})" style="color:#ff9b9b;">حذف</button>
+                    </div>
+                </div>
+            `;
+        });
+        body.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+window.editNews = function (index) {
+    const n = leagueData.news[index];
+    const { toolbar, body } = createModal("تعديل خبر");
+
+    toolbar.innerHTML = `<button class="admin-primary-button" id="btnSaveNews">حفظ الخبر</button>`;
+
+    body.innerHTML = `
+        <div class="admin-field">
+            <label>عنوان الخبر</label>
+            <input type="text" id="n_title" value="${n.title || ""}">
+        </div>
+        <div class="admin-field">
+            <label>نص الخبر</label>
+            <textarea id="n_text">${n.text || n.content || ""}</textarea>
+        </div>
+        <div class="admin-field">
+            <label>رابط صورة</label>
+            <input type="text" id="n_image" value="${n.image || ""}">
+        </div>
+        <div class="admin-field">
+            <label>رابط يوتيوب (اختياري)</label>
+            <input type="text" id="n_youtube" value="${n.youtube || ""}">
+        </div>
+    `;
+
+    document.getElementById("btnSaveNews").onclick = async () => {
+        leagueData.news[index] = {
+            title: document.getElementById("n_title").value.trim(),
+            text: document.getElementById("n_text").value.trim(),
+            image: document.getElementById("n_image").value.trim(),
+            youtube: document.getElementById("n_youtube").value.trim()
+        };
+        const ok = await saveLeagueData();
+        if (ok) openNewsManager();
+    };
+};
+
+window.deleteNews = async function (index) {
+    if (!confirm("حذف الخبر؟")) return;
+    leagueData.news.splice(index, 1);
+    const ok = await saveLeagueData();
+    if (ok) openNewsManager();
+};
+
+/* =========================
+   5. إعدادات الدوري
+   ========================= */
+async function openSettingsManager() {
+    try {
+        await loadLeagueData();
+        const { toolbar, body } = createModal("إعدادات الدوري");
+        const s = leagueData.settings;
+
+        toolbar.innerHTML = `<button class="admin-primary-button" id="btnSaveSettings">حفظ الإعدادات</button>`;
+
+        body.innerHTML = `
+            <div class="admin-field">
+                <label>اسم الدوري</label>
+                <input type="text" id="s_leagueName" value="${s.leagueName || ""}">
+            </div>
+            <div class="admin-field">
+                <label>الموسم</label>
+                <input type="text" id="s_season" value="${s.season || ""}">
+            </div>
+            <div class="admin-field">
+                <label>رابط الشعار</label>
+                <input type="text" id="s_logo" value="${s.logo || ""}">
+            </div>
+            <div class="admin-field">
+                <label>عنوان الهيرو</label>
+                <input type="text" id="s_heroTitle" value="${s.heroTitle || ""}">
+            </div>
+            <div class="admin-field">
+                <label>العنوان الفرعي</label>
+                <input type="text" id="s_heroSubtitle" value="${s.heroSubtitle || ""}">
+            </div>
+            <div class="admin-field">
+                <label>الوصف</label>
+                <textarea id="s_description">${s.description || ""}</textarea>
+            </div>
+        `;
+
+        document.getElementById("btnSaveSettings").onclick = async () => {
+            leagueData.settings = {
+                leagueName: document.getElementById("s_leagueName").value.trim(),
+                season: document.getElementById("s_season").value.trim(),
+                logo: document.getElementById("s_logo").value.trim(),
+                heroTitle: document.getElementById("s_heroTitle").value.trim(),
+                heroSubtitle: document.getElementById("s_heroSubtitle").value.trim(),
+                description: document.getElementById("s_description").value.trim()
+            };
+            await saveLeagueData();
+        };
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+/* =========================
+   تشغيل اللوحة
+   ========================= */
 document.addEventListener("DOMContentLoaded", async () => {
     const access = await checkAdminAccess();
     if (!access) return;
 
-    // البحث بجميع الطرق الممكنة عن الكروت والأزرار
-    document.body.addEventListener("click", (e) => {
-        const target = e.target.closest("div, button, a");
-        if (!target) return;
-
-        const text = target.textContent || "";
-        
-        if (text.includes("المباريات") || target.id === "matchesAdminButton") {
-            e.preventDefault();
-            openMatchesManager();
-        } else if (text.includes("الفرق") || target.id === "teamsAdminButton") {
-            e.preventDefault();
-            openTeamsManager();
-        } else if (text.includes("اللاعبون") || text.includes("اللاعبين") || target.id === "playersAdminButton") {
-            e.preventDefault();
-            alert("قسم اللاعبين جاهز، سيتم إدراجه.");
-        } else if (text.includes("الأخبار") || target.id === "newsAdminButton") {
-            e.preventDefault();
-            alert("قسم الأخبار جاهز، سيتم إدراجه.");
-        }
-    });
-
+    // ربط الأزرار بـ IDs (الأضمن)
+    const matchesBtn = document.getElementById("matchesAdminButton");
+    const teamsBtn = document.getElementById("teamsAdminButton");
+    const playersBtn = document.getElementById("playersAdminButton");
+    const newsBtn = document.getElementById("newsAdminButton");
+    const settingsBtn = document.getElementById("settingsAdminButton");
     const logoutBtn = document.getElementById("adminLogoutButton");
+
+    if (matchesBtn) matchesBtn.addEventListener("click", openMatchesManager);
+    if (teamsBtn) teamsBtn.addEventListener("click", openTeamsManager);
+    if (playersBtn) playersBtn.addEventListener("click", openPlayersManager);
+    if (newsBtn) newsBtn.addEventListener("click", openNewsManager);
+    if (settingsBtn) settingsBtn.addEventListener("click", openSettingsManager);
+
     if (logoutBtn) {
         logoutBtn.addEventListener("click", async () => {
             await supabaseClient.auth.signOut();
             window.location.href = "admin.html";
         });
     }
+
+    showMessage("لوحة الإدارة جاهزة", "success");
 });
