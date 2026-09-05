@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>لوحة الإدارة - دوري ميدي 2026</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <main class="admin-panel-page">
+
+        <header class="admin-panel-header">
+
+            <div class="admin-brand">
+
+                <img
+                    src="https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png"
+                    alt="دوري ميدي">
+
+                <div>
+                    <strong>دوري ميدي</strong>
+                    <span>لوحة الإدارة 2026</span>
+                </div>
+
+            </div>
+
+
+            <button
+                id="adminLogoutButton"
+                class="admin-logout-button"
+                type="button">
+
+                تسجيل الخروج
+
+            </button>
+
+        </header>
+
+
+        <section class="admin-welcome">
+
+            <span>ADMIN PANEL</span>
+
+            <h1>
+                لوحة تحكم دوري ميدي
+            </h1>
+
+            <p>
+                من هنا ستتمكن من إدارة الفرق واللاعبين والمباريات والأخبار.
+            </p>
+
+        </section>
+
+
+        <section class="admin-dashboard-grid">
+
+            <button class="admin-menu-card" type="button">
+                <strong>المباريات</strong>
+                <span>إضافة وتعديل وحذف المباريات</span>
+            </button>
+
+            <button class="admin-menu-card" type="button">
+                <strong>الفرق</strong>
+                <span>إدارة الأندية والشعارات</span>
+            </button>
+
+            <button class="admin-menu-card" type="button">
+                <strong>اللاعبون</strong>
+                <span>إدارة اللاعبين والصور</span>
+            </button>
+
+            <button class="admin-menu-card" type="button">
+                <strong>الأخبار</strong>
+                <span>إضافة وتعديل أخبار الدوري</span>
+            </button>
+
+            <button class="admin-menu-card" type="button">
+                <strong>إعدادات الدوري</strong>
+                <span>اسم الدوري والشعار والمعلومات</span>
+            </button>
+
+        </section>
+
+
+        <div id="adminPanelMessage" class="admin-panel-message"></div>
+
+
+        <a href="index.html" class="admin-back-link">
+            ← العودة إلى الموقع
+        </a>
+
+    </main>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/supabase.js"></script>
+
+    <script src="js/admin-panel.js"></script>
+
+</body>
+
+</html>
