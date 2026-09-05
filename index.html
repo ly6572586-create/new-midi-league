@@ -1,338 +1,705 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>دوري ميدي للمحترفين 2026</title>
 
-    <!-- خط Cairo -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap"
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet"
     >
 
-    <!-- التصميم -->
-    <link rel="stylesheet" href="css/style.css">
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
 </head>
 
 <body>
 
-    <!-- رأس الموقع -->
-    <header class="header">
-        <div class="head">
+    <!-- =========================
+         الهيدر
+    ========================== -->
+
+    <header class="top-header">
+
+        <div class="header-inner">
+
+            <button
+                class="icon-button"
+                id="menuButton"
+                aria-label="القائمة"
+            >
+                ☰
+            </button>
 
             <div class="brand">
+
                 <img
-                    class="league-logo"
                     src="https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png"
                     alt="شعار دوري ميدي"
                 >
 
                 <div>
-                    <div class="title">
-                        دوري ميدي للمحترفين
-                    </div>
+                    <strong>
+                        دوري ميدي
+                    </strong>
 
-                    <div class="sub">
-                        ملعب بني فايد 2026
-                    </div>
+                    <span>
+                        للمحترفين
+                    </span>
+
+                    <b>
+                        2026
+                    </b>
                 </div>
+
             </div>
 
-            <div class="actions">
+
+            <nav class="main-nav">
+
                 <button
-                    class="icon"
-                    id="themeButton"
-                    type="button"
+                    data-tab="matches"
+                    class="active"
                 >
-                    ☀️/🌙
+                    المباريات
                 </button>
+
+                <button data-tab="standings">
+                    الترتيب
+                </button>
+
+                <button data-tab="scorers">
+                    الهدافون
+                </button>
+
+                <button data-tab="teams">
+                    الفرق
+                </button>
+
+                <button data-tab="news">
+                    الأخبار
+                </button>
+
+            </nav>
+
+
+            <div class="header-tools">
+
+                <button
+                    class="icon-button"
+                    id="themeButton"
+                    aria-label="الوضع الليلي"
+                >
+                    ◐
+                </button>
+
+                <button
+                    class="icon-button"
+                    aria-label="البحث"
+                >
+                    ⌕
+                </button>
+
             </div>
 
         </div>
+
     </header>
 
 
-    <!-- المحتوى الرئيسي -->
-    <main class="container">
 
-        <div id="public">
+    <!-- =========================
+         المحتوى الرئيسي
+    ========================== -->
 
-            <!-- المباراة القادمة -->
-            <div class="count">
-                <div class="small">
-                    ⏳ المباراة القادمة
+    <main class="site-main">
+
+
+        <!-- =========================
+             HERO
+        ========================== -->
+
+        <section class="hero">
+
+            <div class="hero-glow glow-one"></div>
+            <div class="hero-glow glow-two"></div>
+
+            <div class="hero-content">
+
+                <div class="hero-copy">
+
+                    <div class="hero-badge">
+                        ✦ الموسم 2026
+                    </div>
+
+                    <h1>
+                        دوري ميدي
+                        <span>
+                            للمحترفين
+                        </span>
+                    </h1>
+
+                    <p>
+                        أكثر من مجرد دوري...
+                        <strong>
+                            إنها أسطورة
+                        </strong>
+                    </p>
+
+                    <button
+                        class="hero-button"
+                        data-tab="matches"
+                    >
+                        استكشف الدوري
+                        <span>←</span>
+                    </button>
+
                 </div>
 
-                <div
-                    class="timer"
-                    id="timer"
+
+                <div class="hero-trophy">
+
+                    <div class="trophy-ring"></div>
+
+                    <div class="trophy-icon">
+                        🏆
+                    </div>
+
+                    <div class="trophy-light"></div>
+
+                </div>
+
+
+                <div class="hero-next">
+
+                    <div class="next-label">
+                        المباراة القادمة
+                    </div>
+
+                    <div class="next-round">
+                        الجولة 3
+                    </div>
+
+                    <div
+                        id="nextMatch"
+                        class="next-match-content"
+                    >
+                        جاري تحميل المباراة...
+                    </div>
+
+                    <button
+                        class="gold-button"
+                        data-tab="matches"
+                    >
+                        التفاصيل الكاملة
+                        <span>←</span>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             اختصارات
+        ========================== -->
+
+        <section class="quick-links">
+
+            <button data-tab="matches">
+                <span class="quick-icon">◫</span>
+                <strong>المباريات</strong>
+                <small>جدول المباريات والنتائج</small>
+            </button>
+
+            <button data-tab="standings">
+                <span class="quick-icon">▥</span>
+                <strong>الترتيب</strong>
+                <small>جدول ترتيب الفرق</small>
+            </button>
+
+            <button data-tab="teams">
+                <span class="quick-icon">♜</span>
+                <strong>الفرق</strong>
+                <small>جميع الفرق المشاركة</small>
+            </button>
+
+            <button data-tab="scorers">
+                <span class="quick-icon">⚽</span>
+                <strong>الهدافون</strong>
+                <small>ترتيب هدافي الدوري</small>
+            </button>
+
+            <button data-tab="news">
+                <span class="quick-icon">▤</span>
+                <strong>الأخبار</strong>
+                <small>آخر أخبار الدوري</small>
+            </button>
+
+        </section>
+
+
+
+        <!-- =========================
+             المباريات
+        ========================== -->
+
+        <section
+            id="sec-matches"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <span class="section-kicker">
+                        MATCH CENTER
+                    </span>
+
+                    <h2>
+                        آخر النتائج
+                    </h2>
+                </div>
+
+                <button
+                    class="text-button"
+                    data-tab="matches"
                 >
-                    —
-                </div>
+                    عرض جميع النتائج ←
+                </button>
+
             </div>
 
 
-            <!-- المباريات -->
-            <section id="sec-matches">
+            <div
+                id="matches"
+                class="matches-grid"
+            >
+                جاري تحميل المباريات...
+            </div>
 
-                <div class="section-title">
-                    <span>📅 المباريات</span>
+        </section>
+
+
+
+        <!-- =========================
+             الترتيب
+        ========================== -->
+
+        <section
+            id="sec-standings"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <span class="section-kicker">
+                        LEAGUE TABLE
+                    </span>
+
+                    <h2>
+                        جدول الترتيب
+                    </h2>
                 </div>
 
-                <div id="matches"></div>
-
-            </section>
-
-
-            <!-- جدول الترتيب -->
-            <section
-                id="sec-standings"
-                class="hidden"
-            >
-
-                <div class="card">
-
-                    <div class="section-title">
-                        🏆 جدول الترتيب
-                    </div>
-
-                    <div style="overflow:auto">
-
-                        <table>
-
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>الفريق</th>
-                                    <th>ل</th>
-                                    <th>ف</th>
-                                    <th>ت</th>
-                                    <th>خ</th>
-                                    <th>له</th>
-                                    <th>عليه</th>
-                                    <th>+/-</th>
-                                    <th>نقاط</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="standings"></tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- الأخبار -->
-            <section
-                id="sec-news"
-                class="hidden"
-            >
-
-                <div class="section-title">
-                    📰 الأخبار والوسائط
-                </div>
-
-                <div id="news"></div>
-
-            </section>
-
-
-            <!-- الفرق واللاعبون -->
-            <section
-                id="sec-teams"
-                class="hidden"
-            >
-
-                <div
-                    class="team-nav"
-                    id="teamNav"
-                ></div>
-
-                <div
-                    class="card"
-                    style="margin-top:10px"
+                <button
+                    class="text-button"
+                    data-tab="standings"
                 >
+                    عرض الجدول كاملًا ←
+                </button>
 
-                    <div class="section-title">
-                        <span id="teamTitle"></span>
-                    </div>
+            </div>
 
-                    <input
-                        class="input search"
-                        id="playerSearch"
-                        type="search"
-                        placeholder="🔎 ابحث عن لاعب بالاسم..."
+
+            <div class="premium-table">
+
+                <div class="table-wrap">
+
+                    <table
+                        id="standings"
+                        class="standings"
                     >
 
-                    <div
-                        class="players"
-                        id="players"
-                    ></div>
+                        <thead>
+
+                            <tr>
+                                <th>#</th>
+                                <th>الفريق</th>
+                                <th>لعب</th>
+                                <th>فاز</th>
+                                <th>تعادل</th>
+                                <th>خسر</th>
+                                <th>له</th>
+                                <th>عليه</th>
+                                <th>+/-</th>
+                                <th>النقاط</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+                        </tbody>
+
+                    </table>
 
                 </div>
 
-            </section>
+            </div>
+
+        </section>
 
 
-            <!-- الهدافون والبطاقات -->
-            <section
+
+        <!-- =========================
+             الهدافون + الفرق
+        ========================== -->
+
+        <section class="split-section">
+
+
+            <div
                 id="sec-scorers"
-                class="hidden"
+                class="content-section"
             >
 
-                <div class="card">
+                <div class="section-header">
 
-                    <div class="section-title">
-                        ⚽ الهدافون
+                    <div>
+                        <span class="section-kicker">
+                            TOP SCORERS
+                        </span>
+
+                        <h2>
+                            هدافو الدوري
+                        </h2>
                     </div>
 
-                    <div id="scorers"></div>
+                    <button
+                        class="text-button"
+                        data-tab="scorers"
+                    >
+                        عرض الجميع ←
+                    </button>
 
                 </div>
 
 
-                <div class="card">
+                <div class="scorer-feature">
 
-                    <div class="section-title">
-                        🟨🟥 البطاقات
+                    <div class="scorer-avatar">
+                        ⚽
                     </div>
 
-                    <div id="cards"></div>
+                    <div class="scorer-main">
+
+                        <span>
+                            هداف الدوري
+                        </span>
+
+                        <strong>
+                            أصيل علي
+                        </strong>
+
+                        <small>
+                            الفرسان
+                        </small>
+
+                    </div>
+
+                    <div class="scorer-number">
+                        <strong>—</strong>
+                        <span>أهداف</span>
+                    </div>
 
                 </div>
 
-            </section>
 
-
-            <!-- الإدارة -->
-            <section
-                id="sec-admin"
-                class="hidden"
-            >
-
-                <div
-                    id="adminLogin"
-                    class="card"
+                <ul
+                    id="scorers"
+                    class="stat-list"
                 >
+                    <li>
+                        جاري تحميل الهدافين...
+                    </li>
+                </ul>
 
-                    <div class="section-title">
-                        🔐 دخول الإدارة
+            </div>
+
+
+
+            <div
+                id="sec-teams"
+                class="content-section"
+            >
+
+                <div class="section-header">
+
+                    <div>
+                        <span class="section-kicker">
+                            CLUBS
+                        </span>
+
+                        <h2>
+                            الفرق المشاركة
+                        </h2>
                     </div>
 
-                    <div class="notice">
-                        صفحة الإدارة مستقلة ولا يوجد رابط لها في الواجهة العامة.
-                    </div>
-
-                    <div class="form">
-
-                        <input
-                            class="input"
-                            id="email"
-                            type="email"
-                            placeholder="البريد الإلكتروني للإدارة"
-                        >
-
-                        <input
-                            class="input"
-                            id="password"
-                            type="password"
-                            placeholder="كلمة المرور"
-                        >
-
-                        <button
-                            class="btn primary"
-                            id="loginButton"
-                            type="button"
-                        >
-                            تسجيل الدخول
-                        </button>
-
-                    </div>
+                    <button
+                        class="text-button"
+                        data-tab="teams"
+                    >
+                        جميع الفرق ←
+                    </button>
 
                 </div>
 
 
                 <div
-                    id="adminPanel"
-                    class="hidden"
-                ></div>
+                    id="teams"
+                    class="teams-grid"
+                >
+                    جاري تحميل الفرق...
+                </div>
 
-            </section>
+            </div>
 
-        </div>
+        </section>
+
+
+
+        <!-- =========================
+             الأخبار
+        ========================== -->
+
+        <section
+            id="sec-news"
+            class="content-section"
+        >
+
+            <div class="section-header">
+
+                <div>
+                    <span class="section-kicker">
+                        LATEST NEWS
+                    </span>
+
+                    <h2>
+                        أحدث الأخبار
+                    </h2>
+                </div>
+
+                <button
+                    class="text-button"
+                    data-tab="news"
+                >
+                    جميع الأخبار ←
+                </button>
+
+            </div>
+
+
+            <div
+                id="news"
+                class="news-grid"
+            >
+                جاري تحميل الأخبار...
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             إحصائيات
+        ========================== -->
+
+        <section class="league-stats">
+
+            <div class="stats-title">
+
+                <span>
+                    SEASON
+                </span>
+
+                <h2>
+                    أرقام الدوري
+                </h2>
+
+            </div>
+
+
+            <div class="stat-box">
+
+                <strong>
+                    4
+                </strong>
+
+                <span>
+                    فرق مشاركة
+                </span>
+
+            </div>
+
+
+            <div class="stat-box">
+
+                <strong>
+                    6
+                </strong>
+
+                <span>
+                    مباريات
+                </span>
+
+            </div>
+
+
+            <div class="stat-box">
+
+                <strong>
+                    18
+                </strong>
+
+                <span>
+                    هدفًا
+                </span>
+
+            </div>
+
+
+            <div class="stat-box">
+
+                <strong>
+                    2026
+                </strong>
+
+                <span>
+                    الموسم
+                </span>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =========================
+             الدعوة
+        ========================== -->
+
+        <section class="cta">
+
+            <div>
+
+                <span>
+                    دوري ميدي للمحترفين 2026
+                </span>
+
+                <h2>
+                    كن جزءًا من الحدث
+                </h2>
+
+                <p>
+                    تابع كل مباراة وكل لحظة
+                    من منافسات الدوري.
+                </p>
+
+            </div>
+
+
+            <button
+                class="gold-button"
+                data-tab="matches"
+            >
+                استكشف المباريات
+                <span>←</span>
+            </button>
+
+        </section>
+
 
     </main>
 
 
-    <!-- القائمة السفلية -->
-    <nav class="nav">
+
+    <!-- =========================
+         شريط الهاتف
+    ========================== -->
+
+    <nav class="bottom-nav">
 
         <button
-            class="active"
-            id="nav-matches"
             data-tab="matches"
-            type="button"
+            class="active"
         >
-            <span>📅</span>
-            المباريات
+            <span>◫</span>
+            <small>المباريات</small>
         </button>
 
-
-        <button
-            id="nav-standings"
-            data-tab="standings"
-            type="button"
-        >
-            <span>🏆</span>
-            الترتيب
+        <button data-tab="standings">
+            <span>▥</span>
+            <small>الترتيب</small>
         </button>
 
-
-        <button
-            id="nav-news"
-            data-tab="news"
-            type="button"
-        >
-            <span>📰</span>
-            الأخبار
+        <button data-tab="teams">
+            <span>♜</span>
+            <small>الفرق</small>
         </button>
 
-
         <button
-            id="nav-teams"
-            data-tab="teams"
-            type="button"
-        >
-            <span>🛡️</span>
-            الفرق
-        </button>
-
-
-        <button
-            id="nav-scorers"
             data-tab="scorers"
-            type="button"
+            class="bottom-main"
         >
             <span>⚽</span>
-            الهدافين
+            <small>الهدافون</small>
+        </button>
+
+        <button data-tab="news">
+            <span>▤</span>
+            <small>الأخبار</small>
         </button>
 
     </nav>
 
 
-    <!-- Supabase -->
+
+    <!-- =========================
+         Supabase
+    ========================== -->
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- ملفات المشروع -->
     <script src="js/supabase.js"></script>
+
     <script src="js/data.js"></script>
+
     <script src="js/app.js"></script>
 
 </body>
+
 </html>
