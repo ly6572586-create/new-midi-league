@@ -3,10 +3,41 @@
    الملف: js/data.js
    ========================================= */
 
+
+/* =========================
+   البيانات الافتراضية
+   ========================= */
+
 const INITIAL_DATA = {
+
+    /* إعدادات الموقع */
+    settings: {
+        leagueName: "دوري ميدي للمحترفين",
+        season: "2026",
+
+        logo: "https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png",
+
+        heroTitle: "دوري ميدي",
+        heroSubtitle: "للمحترفين",
+
+        description:
+            "أكثر من مجرد دوري... إنها أسطورة"
+    },
+
+
+    /* الأندية */
     teams: [],
+
+
+    /* اللاعبين */
     players: {},
+
+
+    /* المباريات */
     matches: [],
+
+
+    /* الأخبار */
     news: []
 };
 
@@ -21,13 +52,22 @@ function normalizeLeagueData(rawData) {
         return { ...INITIAL_DATA };
     }
 
+
     let data = rawData;
 
-    // بيانات Supabase قد تصل كنص JSON
+
+    /* =========================
+       تحويل JSON إلى Object
+       ========================= */
+
     if (typeof data === "string") {
+
         try {
+
             data = JSON.parse(data);
+
         } catch (error) {
+
             console.error(
                 "خطأ في تحويل بيانات الدوري:",
                 error
@@ -38,9 +78,36 @@ function normalizeLeagueData(rawData) {
     }
 
 
+    /* =========================
+       إعدادات الموقع
+       ========================= */
+
+    const defaultSettings = {
+        ...INITIAL_DATA.settings
+    };
+
+    const settings =
+        data.settings &&
+        typeof data.settings === "object"
+            ? {
+                ...defaultSettings,
+                ...data.settings
+            }
+            : defaultSettings;
+
+
+    /* =========================
+       الأندية
+       ========================= */
+
     const teams = Array.isArray(data.teams)
         ? data.teams
         : [];
+
+
+    /* =========================
+       اللاعبين
+       ========================= */
 
     const players =
         data.players &&
@@ -48,32 +115,40 @@ function normalizeLeagueData(rawData) {
             ? data.players
             : {};
 
+
+    /* =========================
+       المباريات
+       ========================= */
+
     const matches = Array.isArray(data.matches)
         ? data.matches
         : [];
 
+
+    /* =========================
+       الأخبار
+       ========================= */
+
     const news = Array.isArray(data.news)
+
         ? data.news.map(item => ({
+
             ...item,
 
-            // توحيد اسم نص الخبر
+            /* توحيد اسم نص الخبر */
             text:
                 item.text ??
                 item.content ??
                 ""
+
         }))
+
         : [];
 
 
-    /*
-     * ربط لاعبي كل فريق بالفريق نفسه
-     *
-     * مثال:
-     * الفرق موجودة في data.teams
-     * واللاعبون موجودون في data.players
-     *
-     * لذلك نضيف اللاعبين إلى كل فريق
-     */
+    /* =========================
+       ربط اللاعبين بالأندية
+       ========================= */
 
     const normalizedTeams = teams.map(team => {
 
@@ -82,17 +157,33 @@ function normalizeLeagueData(rawData) {
                 ? players[team.id]
                 : [];
 
+
         return {
+
             ...team,
+
             players: teamPlayers
+
         };
+
     });
 
 
+    /* =========================
+       البيانات النهائية
+       ========================= */
+
     return {
+
+        settings,
+
         teams: normalizedTeams,
+
         players,
+
         matches,
+
         news
+
     };
 }
