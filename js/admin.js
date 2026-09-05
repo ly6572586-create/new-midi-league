@@ -31,7 +31,12 @@ loginForm.addEventListener("submit", async function (event) {
     const password = passwordInput.value;
 
     if (!email || !password) {
-        showMessage("أدخل البريد الإلكتروني وكلمة المرور.", "error");
+
+        showMessage(
+            "أدخل البريد الإلكتروني وكلمة المرور.",
+            "error"
+        );
+
         return;
     }
 
@@ -52,7 +57,11 @@ loginForm.addEventListener("submit", async function (event) {
 
 
         if (error) {
-            console.error("خطأ تسجيل الدخول:", error);
+
+            console.error(
+                "خطأ تسجيل الدخول:",
+                error
+            );
 
             showMessage(
                 "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -74,7 +83,9 @@ loginForm.addEventListener("submit", async function (event) {
         }
 
 
-        /* التأكد أن الحساب هو حساب الإدارة المحدد */
+        /* =========================
+           التحقق من حساب الإدارة
+           ========================= */
 
         if (data.user.id !== ADMIN_UID) {
 
@@ -89,22 +100,29 @@ loginForm.addEventListener("submit", async function (event) {
         }
 
 
+        /* =========================
+           الدخول إلى لوحة الإدارة
+           ========================= */
+
         showMessage(
-            "تم تسجيل الدخول بنجاح، جاري فتح لوحة الإدارة...",
+            "تم تسجيل الدخول بنجاح...",
             "success"
         );
 
 
         setTimeout(function () {
 
-            window.location.href = "admin.html";
+            window.location.href = "admin-panel.html";
 
         }, 700);
 
 
     } catch (error) {
 
-        console.error("خطأ غير متوقع:", error);
+        console.error(
+            "خطأ غير متوقع:",
+            error
+        );
 
         showMessage(
             "حدث خطأ غير متوقع. حاول مرة أخرى.",
