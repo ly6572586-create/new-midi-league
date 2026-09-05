@@ -1,0 +1,146 @@
+/* =========================================
+   حماية لوحة الإدارة
+   دوري ميدي للمحترفين 2026
+   ========================================= */
+
+const ADMIN_UID = "91807e41-d5da-46b8-a6e6-7a8b07a40779";
+
+const logoutButton = document.getElementById("adminLogoutButton");
+const messageBox = document.getElementById("adminPanelMessage");
+
+
+/* =========================
+   التحقق من تسجيل الدخول
+   ========================= */
+
+async function checkAdminAccess() {
+
+    try {
+
+        const {
+            data: { session },
+            error
+        } = await supabaseClient.auth.getSession();
+
+
+        if (error) {
+
+            console.error(
+                "خطأ في التحقق من الجلسة:",
+                error
+            );
+
+            window.location.href = "admin.html";
+
+            return;
+        }
+
+
+        /* لا توجد جلسة */
+
+        if (!session || !session.user) {
+
+            window.location.href = "admin.html";
+
+            return;
+        }
+
+
+        /* =========================
+           التحقق من حساب الإدارة
+           ========================= */
+
+        if (session.user.id !== ADMIN_UID) {
+
+            await supabaseClient.auth.signOut();
+
+            window.location.href = "admin.html";
+
+            return;
+        }
+
+
+        /* الدخول مسموح */
+
+        console.log("تم التحقق من حساب الإدارة.");
+
+        if (messageBox) {
+
+            messageBox.textContent =
+                "تم تسجيل الدخول إلى لوحة الإدارة.";
+
+            messageBox.className =
+                "admin-panel-message success";
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "خطأ غير متوقع:",
+            error
+        );
+
+        window.location.href = "admin.html";
+
+    }
+
+}
+
+
+/* =========================
+   تسجيل الخروج
+   ========================= */
+
+if (logoutButton) {
+
+    logoutButton.addEventListener(
+        "click",
+        async function () {
+
+            logoutButton.disabled = true;
+            logoutButton.textContent =
+                "جاري تسجيل الخروج...";
+
+
+            const { error } =
+                await supabaseClient.auth.signOut();
+
+
+            if (error) {
+
+                console.error(
+                    "خطأ تسجيل الخروج:",
+                    error
+                );
+
+                logoutButton.disabled = false;
+                logoutButton.textContent =
+                    "تسجيل الخروج";
+
+                if (messageBox) {
+
+                    messageBox.textContent =
+                        "تعذر تسجيل الخروج. حاول مرة أخرى.";
+
+                    messageBox.className =
+                        "admin-panel-message error";
+
+                }
+
+                return;
+            }
+
+
+            window.location.href = "admin.html";
+
+        }
+    );
+
+}
+
+
+/* تشغيل التحقق */
+
+checkAdminAccess();
