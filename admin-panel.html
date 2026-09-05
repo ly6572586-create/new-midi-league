@@ -10,104 +10,318 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <main class="admin-panel-page">
+<main class="admin-panel-page">
 
-        <header class="admin-panel-header">
+    <!-- =========================
+         رأس لوحة الإدارة
+         ========================= -->
 
-            <div class="admin-brand">
+    <header class="admin-panel-header">
 
-                <img
-                    src="https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png"
-                    alt="دوري ميدي">
+        <div class="admin-brand">
 
-                <div>
-                    <strong>دوري ميدي</strong>
-                    <span>لوحة الإدارة 2026</span>
-                </div>
+            <img
+                src="https://i.postimg.cc/xC7qTMXK/IMG-20260829-232623.png"
+                alt="شعار دوري ميدي">
 
+            <div class="admin-brand-text">
+                <strong>دوري ميدي</strong>
+                <span>لوحة الإدارة</span>
+                <small>الموسم 2026</small>
             </div>
 
+        </div>
 
-            <button
-                id="adminLogoutButton"
-                class="admin-logout-button"
-                type="button">
+        <button
+            id="adminLogoutButton"
+            class="admin-logout-button"
+            type="button">
 
-                تسجيل الخروج
+            تسجيل الخروج
 
-            </button>
+        </button>
 
-        </header>
+    </header>
 
 
-        <section class="admin-welcome">
+    <!-- =========================
+         الترحيب
+         ========================= -->
 
-            <span>ADMIN PANEL</span>
+    <section class="admin-welcome">
+
+        <div class="admin-welcome-content">
+
+            <span class="admin-kicker">
+                ADMIN PANEL
+            </span>
 
             <h1>
                 لوحة تحكم دوري ميدي
             </h1>
 
             <p>
-                من هنا ستتمكن من إدارة الفرق واللاعبين والمباريات والأخبار.
+                تحكم في مباريات الدوري والفرق واللاعبين والأخبار والإعدادات
+                من مكان واحد.
             </p>
 
-        </section>
+        </div>
+
+        <div class="admin-welcome-badge">
+            <strong>2026</strong>
+            <span>SEASON</span>
+        </div>
+
+    </section>
 
 
-        <section class="admin-dashboard-grid">
+    <!-- =========================
+         أدوات الإدارة
+         ========================= -->
 
-            <button class="admin-menu-card" type="button">
-                <strong>المباريات</strong>
-                <span>إضافة وتعديل وحذف المباريات</span>
+    <section class="admin-section">
+
+        <div class="admin-section-header">
+
+            <div>
+                <span>CONTROL CENTER</span>
+
+                <h2>
+                    إدارة الدوري
+                </h2>
+            </div>
+
+            <p>
+                اختر القسم الذي تريد إدارته
+            </p>
+
+        </div>
+
+
+        <div class="admin-dashboard-grid">
+
+            <!-- المباريات -->
+
+            <button
+                id="matchesAdminButton"
+                class="admin-menu-card admin-card-matches"
+                type="button">
+
+                <span class="admin-card-icon">
+                    ⚽
+                </span>
+
+                <div class="admin-card-content">
+
+                    <strong>
+                        المباريات
+                    </strong>
+
+                    <span>
+                        إضافة وتعديل وحذف المباريات والنتائج
+                    </span>
+
+                </div>
+
+                <span class="admin-card-arrow">
+                    ←
+                </span>
+
             </button>
 
-            <button class="admin-menu-card" type="button">
-                <strong>الفرق</strong>
-                <span>إدارة الأندية والشعارات</span>
+
+            <!-- الفرق -->
+
+            <button
+                id="teamsAdminButton"
+                class="admin-menu-card admin-card-teams"
+                type="button">
+
+                <span class="admin-card-icon">
+                    🏆
+                </span>
+
+                <div class="admin-card-content">
+
+                    <strong>
+                        الفرق
+                    </strong>
+
+                    <span>
+                        إدارة الأندية والشعارات والبيانات
+                    </span>
+
+                </div>
+
+                <span class="admin-card-arrow">
+                    ←
+                </span>
+
             </button>
 
-            <button class="admin-menu-card" type="button">
-                <strong>اللاعبون</strong>
-                <span>إدارة اللاعبين والصور</span>
+
+            <!-- اللاعبين -->
+
+            <button
+                id="playersAdminButton"
+                class="admin-menu-card admin-card-players"
+                type="button">
+
+                <span class="admin-card-icon">
+                    👤
+                </span>
+
+                <div class="admin-card-content">
+
+                    <strong>
+                        اللاعبون
+                    </strong>
+
+                    <span>
+                        إضافة وتعديل وحذف اللاعبين والصور
+                    </span>
+
+                </div>
+
+                <span class="admin-card-arrow">
+                    ←
+                </span>
+
             </button>
 
-            <button class="admin-menu-card" type="button">
-                <strong>الأخبار</strong>
-                <span>إضافة وتعديل أخبار الدوري</span>
+
+            <!-- الأخبار -->
+
+            <button
+                id="newsAdminButton"
+                class="admin-menu-card admin-card-news"
+                type="button">
+
+                <span class="admin-card-icon">
+                    📰
+                </span>
+
+                <div class="admin-card-content">
+
+                    <strong>
+                        الأخبار
+                    </strong>
+
+                    <span>
+                        إضافة وتعديل وحذف أخبار الدوري
+                    </span>
+
+                </div>
+
+                <span class="admin-card-arrow">
+                    ←
+                </span>
+
             </button>
 
-            <button class="admin-menu-card" type="button">
-                <strong>إعدادات الدوري</strong>
-                <span>اسم الدوري والشعار والمعلومات</span>
+
+            <!-- إعدادات الدوري -->
+
+            <button
+                id="settingsAdminButton"
+                class="admin-menu-card admin-card-settings"
+                type="button">
+
+                <span class="admin-card-icon">
+                    ⚙️
+                </span>
+
+                <div class="admin-card-content">
+
+                    <strong>
+                        إعدادات الدوري
+                    </strong>
+
+                    <span>
+                        اسم الدوري والشعار والمعلومات الرئيسية
+                    </span>
+
+                </div>
+
+                <span class="admin-card-arrow">
+                    ←
+                </span>
+
             </button>
 
-        </section>
+        </div>
+
+    </section>
 
 
-        <div id="adminPanelMessage" class="admin-panel-message"></div>
+    <!-- =========================
+         حالة لوحة الإدارة
+         ========================= -->
+
+    <section class="admin-status-card">
+
+        <div class="admin-status-icon">
+            ✓
+        </div>
+
+        <div>
+
+            <strong>
+                لوحة الإدارة محمية
+            </strong>
+
+            <span>
+                تم الدخول باستخدام حساب الإدارة الآمن.
+            </span>
+
+        </div>
+
+    </section>
 
 
-        <a href="index.html" class="admin-back-link">
-            ← العودة إلى الموقع
-        </a>
+    <!-- =========================
+         الرسائل
+         ========================= -->
 
-    </main>
+    <div
+        id="adminPanelMessage"
+        class="admin-panel-message">
+    </div>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- =========================
+         العودة للموقع
+         ========================= -->
 
-    <script src="js/supabase.js"></script>
+    <a
+        href="index.html"
+        class="admin-back-link">
 
-    <script src="js/admin-panel.js"></script>
+        ← العودة إلى الموقع
+
+    </a>
+
+</main>
+
+
+<!-- =========================
+     Supabase
+     ========================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/supabase.js"></script>
+
+<script src="js/admin-panel.js"></script>
 
 </body>
 
